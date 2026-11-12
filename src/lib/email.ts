@@ -84,7 +84,7 @@ export async function sendEmail(settings: EmailSettings, msg: OutgoingEmail): Pr
     }
   }
 
-  await new Promise((r) => setTimeout(r, 500 + Math.min(1500, msg.to.length * 15)))
+  await new Promise((r) => setTimeout(r, 150 + Math.random() * 250))
   return { ok: true, simulated: true }
 }
 

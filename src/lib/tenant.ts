@@ -18,7 +18,10 @@ export type TenantPlan = 'starter' | 'growth' | 'enterprise'
 export interface TenantRef {
   id: string
   subdomain: string
+  /** Claimed custom domain (pending or verified) – used for uniqueness checks. */
   customDomain: string
+  /** Only verified domains are used to resolve the tenant from the host name. */
+  domainVerified?: boolean
   name: string
   /** Managed by the platform super admin. */
   status?: 'active' | 'suspended'
@@ -30,7 +33,7 @@ export interface TenantRef {
 
 const REGISTRY_KEY = 'cms:registry'
 
-export const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/
+export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/
 export const DOMAIN_RE = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
 
 function readRegistry(): TenantRef[] {
@@ -126,7 +129,7 @@ export function resolveTenant(loc: Location = window.location): ResolvedTenant {
     return { id: hit?.id ?? '', via: 'query', slug: param, missing: !hit }
   }
 
-  const byDomain = registry.find((t) => t.customDomain && t.customDomain === host)
+  const byDomain = registry.find((t) => t.customDomain && t.domainVerified && t.customDomain === host)
   if (byDomain) return { id: byDomain.id, via: 'custom-domain', slug: byDomain.subdomain }
 
   const suffix = '.' + PLATFORM_DOMAIN

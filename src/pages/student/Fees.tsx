@@ -22,7 +22,7 @@ export default function StudentFees() {
       <PageHeader title="Fee payment" subtitle="Pay securely online and download receipts instantly" />
       <div className="grid stats-grid three">
         <div className="card stat-plain"><small className="muted">Total payable</small><strong>{formatMoney(due.reduce((a, f) => a + f.total, 0), cur)}</strong></div>
-        <div className="card stat-plain"><small className="muted">Paid this term</small><strong>{formatMoney(history.filter((p) => p.status === 'success').reduce((a, p) => a + p.amount + p.lateFee, 0), cur)}</strong></div>
+        <div className="card stat-plain"><small className="muted">Total paid</small><strong>{formatMoney(history.filter((p) => p.status === 'success').reduce((a, p) => a + p.amount + p.lateFee, 0), cur)}</strong></div>
         <div className="card stat-plain"><small className="muted">Next due</small><strong>{due[0] ? formatDate(due[0].fee.dueDate) : '—'}</strong></div>
       </div>
       <Card title="Fee items" pad={false}>

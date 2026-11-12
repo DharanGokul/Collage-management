@@ -143,7 +143,7 @@ export function SuperConsole() {
                 <thead><tr><th>College</th><th>Portal URL</th><th>Admin</th><th>Plan</th><th>Students</th><th>Fees collected</th><th>Status</th><th className="right">Actions</th></tr></thead>
                 <tbody>
                   {filtered.map(({ t, students, staff, collected, color, logo }) => {
-                    const url = portalUrl(t.subdomain, t.customDomain, !!t.customDomain)
+                    const url = portalUrl(t.subdomain, t.customDomain, !!t.domainVerified)
                     const plan = PLANS[t.plan ?? 'starter']
                     const over = students > plan.students
                     return (
@@ -156,7 +156,7 @@ export function SuperConsole() {
                         </td>
                         <td>
                           <div className="row gap-s"><Globe size={14} className="muted" /><span className="mono tiny">{url.replace('https://', '')}</span><button className="icon-btn sm" aria-label="Copy URL" onClick={() => navigator.clipboard?.writeText(url).then(() => toast('URL copied'))}><Copy size={12} /></button></div>
-                          {t.customDomain && <Badge tone="green">custom domain</Badge>}
+                          {t.customDomain && (t.domainVerified ? <Badge tone="green">custom domain</Badge> : <Badge tone="amber">domain pending</Badge>)}
                         </td>
                         <td className="tiny">{t.adminEmail ?? <span className="muted">any (demo)</span>}</td>
                         <td>

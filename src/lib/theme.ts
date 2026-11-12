@@ -32,15 +32,21 @@ export function contrastRatio(a: string, b: string) {
 /** White or near-black text, whichever reads better on the brand colour. */
 export const contrastText = (hex: string) => (contrastRatio(hex, '#ffffff') >= 3 ? '#ffffff' : '#111827')
 
-export function applyTheme(b: Branding) {
+/** Sets every brand-derived CSS variable from one hex colour. */
+export function applyPalette(hex: string) {
   const root = document.documentElement
-  const primary = HEX_RE.test(b.primaryColor) ? b.primaryColor : '#4f46e5'
+  const primary = HEX_RE.test(hex) ? hex : '#4f46e5'
   const [r, g, bl] = hexToRgb(primary)
   root.style.setProperty('--primary', primary)
   root.style.setProperty('--primary-rgb', `${r} ${g} ${bl}`)
   root.style.setProperty('--primary-hover', mix(primary, [0, 0, 0], 0.15))
   root.style.setProperty('--primary-strong', mix(primary, [0, 0, 0], 0.35))
   root.style.setProperty('--primary-contrast', contrastText(primary))
+  return primary
+}
+
+export function applyTheme(b: Branding) {
+  const primary = applyPalette(b.primaryColor)
 
   document.title = b.collegeName ? `${b.collegeName} · Portal` : 'Campus Portal'
 

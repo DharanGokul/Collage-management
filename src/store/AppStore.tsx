@@ -3,10 +3,11 @@ import type { Database, EmailLog, Role, Session } from '../types'
 import { createSeed } from '../lib/seed'
 import { applyTheme } from '../lib/theme'
 import { getTenant, portalUrl, resolveTenant, upsertTenant, type ResolvedTenant, type TenantPlan } from '../lib/tenant'
-import { sendEmail, type OutgoingEmail } from '../lib/email'
+import { sendEmail, validateEmailSettings, type OutgoingEmail } from '../lib/email'
 import { renderTemplate, uid } from '../lib/utils'
 
 const SCHEMA_VERSION = 1
+const EMAIL_CONCURRENCY = 8
 const dbKey = (t: string) => `cms:db:${t}`
 const sessionKey = (t: string) => `cms:session:${t}`
 
@@ -116,7 +117,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     upsertTenant({
       id: tenant.id,
       subdomain: db.domain.subdomain,
-      customDomain: db.domain.domainStatus === 'verified' ? db.domain.customDomain : '',
+      customDomain: db.domain.customDomain,
+      domainVerified: db.domain.domainStatus === 'verified',
       name: db.branding.collegeName,
     })
   }, [db, tenant.id, tenant.missing])
@@ -168,33 +170,30 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         support_email: d.branding.supportEmail,
       }
       const logs: EmailLog[] = []
-      let sent = 0
-      let failed = 0
-      // Send personalised messages; small batches keep the UI responsive.
-      for (const r of job.recipients) {
+      const log = (msg: OutgoingEmail, ok: boolean, error?: string) =>
+        logs.push({ id: uid('mail'), ...msg, status: ok ? 'sent' : 'failed', error, sentAt: new Date().toISOString(), sentBy: session?.name ?? 'system', provider: d.email.provider })
+      const messages = job.recipients.map((r) => {
         const vars = { ...base, ...r.vars }
-        const msg: OutgoingEmail = {
-          to: [r.email],
-          subject: renderTemplate(job.subject, vars),
-          body: renderTemplate(job.body, vars),
+        return { to: [r.email], subject: renderTemplate(job.subject, vars), body: renderTemplate(job.body, vars) } satisfies OutgoingEmail
+      })
+      // A configuration error fails every message the same way: record each one so "Retry failed" covers them all.
+      const cfgError = validateEmailSettings(d.email)
+      if (cfgError) {
+        for (const m of messages) log(m, false, cfgError)
+      } else {
+        // Send with bounded concurrency instead of one at a time.
+        let next = 0
+        const worker = async () => {
+          while (next < messages.length) {
+            const m = messages[next++]
+            const res = await sendEmail(d.email, m)
+            log(m, res.ok, res.error)
+          }
         }
-        const res = await sendEmail(d.email, msg)
-        res.ok ? sent++ : failed++
-        logs.push({
-          id: uid('mail'),
-          ...msg,
-          status: res.ok ? 'sent' : 'failed',
-          error: res.error,
-          sentAt: new Date().toISOString(),
-          sentBy: session?.name ?? 'system',
-          provider: d.email.provider,
-        })
-        // Abort early on a configuration error – every other message would fail the same way.
-        if (!res.ok && sent === 0 && failed === 1 && job.recipients.length > 1 && res.error && !res.error.startsWith('Invalid recipient')) {
-          failed = job.recipients.length
-          break
-        }
+        await Promise.all(Array.from({ length: Math.min(EMAIL_CONCURRENCY, messages.length) }, worker))
       }
+      const sent = logs.filter((l) => l.status === 'sent').length
+      const failed = logs.length - sent
       update((draft) => {
         draft.emailLog = [...logs.reverse(), ...draft.emailLog].slice(0, 500)
       })

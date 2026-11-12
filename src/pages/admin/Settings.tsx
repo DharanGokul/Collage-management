@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Palette, Globe, Mail, Database as DbIcon, Upload, Trash2, Copy, CheckCircle2, XCircle, Loader2, ExternalLink, Send, Download, RotateCcw, ShieldCheck } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
 import { Badge, Button, Card, Field, Logo, PageHeader, Tabs } from '../../components/ui'
-import { PRESET_COLORS, HEX_RE, contrastRatio, contrastText, readImage, generatedFavicon } from '../../lib/theme'
+import { PRESET_COLORS, HEX_RE, applyPalette, contrastRatio, contrastText, readImage, generatedFavicon } from '../../lib/theme'
 import { DOMAIN_RE, PLATFORM_DOMAIN, SLUG_RE, checkAvailability, portalUrl, previewUrl, verifyDomain } from '../../lib/tenant'
 import { PROVIDERS, sendEmail, validateEmailSettings } from '../../lib/email'
 import { formatDate, isValidEmail } from '../../lib/utils'
@@ -81,10 +81,9 @@ function BrandingTab() {
 
   // Live preview: theme follows unsaved changes; reverts if the user leaves without saving.
   useEffect(() => {
-    const root = document.documentElement
-    if (HEX_RE.test(b.primaryColor)) root.style.setProperty('--primary', b.primaryColor)
+    if (HEX_RE.test(b.primaryColor)) applyPalette(b.primaryColor)
   }, [b.primaryColor])
-  useEffect(() => () => { document.documentElement.style.setProperty('--primary', db.branding.primaryColor) }, [db.branding.primaryColor])
+  useEffect(() => () => { applyPalette(db.branding.primaryColor) }, [db.branding.primaryColor])
 
   const save = () => {
     update((d) => { d.branding = { ...b, collegeName: b.collegeName.trim(), shortName: b.shortName.trim() } })
@@ -290,10 +289,10 @@ function EmailTab() {
     const r = await sendEmail(e, { to: [testTo], subject: `Test email from ${db.branding.collegeName}`, body: `Hello,\n\nThis is a test email confirming that ${e.fromName} can send mail through ${PROVIDERS.find((p) => p.id === e.provider)?.label}.\n\nSent by ${session?.name}.` })
     setTesting(false)
     if (r.ok) {
-      const next = { ...e, verified: true }
-      setE(next)
+      setE((p) => ({ ...p, verified: true }))
       update((d) => {
-        d.email = next
+        // Only mark the saved config as tested; unsaved edits are persisted via Save.
+        if (!dirty) d.email.verified = true
         d.emailLog.unshift({ id: `mail-test-${Date.now()}`, to: [testTo], subject: `Test email from ${db.branding.collegeName}`, body: 'Configuration test', status: 'sent', sentAt: new Date().toISOString(), sentBy: session?.name ?? 'admin', provider: e.provider })
       })
       toast(r.simulated ? 'Configuration valid – test email simulated (connect a relay to deliver for real)' : `Test email delivered to ${testTo}`)
@@ -384,7 +383,8 @@ function DataTab() {
       const required = ['branding', 'students', 'staff', 'subjects', 'timetable', 'attendance', 'fees', 'payments']
       if (!required.every((k) => k in parsed)) throw new Error('Not a valid backup file')
       if (!confirm('Replace all current data with this backup?')) return
-      update((d) => { Object.assign(d, parsed) })
+      // Keep this college's own URL settings: a backup from another college must not claim its sub-domain.
+      update((d) => { Object.assign(d, parsed, { domain: d.domain }) })
       toast('Backup restored')
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Import failed', 'error')

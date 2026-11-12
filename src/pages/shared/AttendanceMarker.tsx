@@ -32,7 +32,8 @@ export default function AttendanceMarker({ subjects, markedBy }: { subjects: Sub
   const [manual, setManual] = useState({ subjectId: subjects[0]?.id ?? '', section: db.sections[0] ?? 'A', period: 1 })
 
   useEffect(() => {
-    setSlotKey(slots[0] ? slots[0].id : 'manual')
+    // Keep the current choice when the slot list is merely rebuilt (e.g. after saving).
+    setSlotKey((prev) => (prev === 'manual' || slots.some((s) => s.id === prev) ? prev : (slots[0]?.id ?? 'manual')))
   }, [slots])
 
   const target = useMemo(() => {
