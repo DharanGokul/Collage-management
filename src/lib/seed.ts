@@ -11,6 +11,7 @@ import type {
   TimetableSlot,
 } from '../types'
 import { classKey, toISODate } from './utils'
+import { seedEvents, seedTickets } from './seedCampus'
 
 // Deterministic PRNG so every fresh tenant gets the same demo data.
 function rng(seed: number) {
@@ -249,12 +250,15 @@ export function createSeed(collegeName = 'Northbridge Institute of Technology'):
     }
   }
 
+  const campus = { students, staff, subjects, departments, sections }
   return {
+    events: seedEvents(campus),
+    tickets: seedTickets(campus),
     branding: {
       collegeName,
       shortName: 'NIT Campus',
       tagline: 'Excellence in learning since 1998',
-      primaryColor: '#4f46e5',
+      primaryColor: '#6d001a',
       logo: null,
       favicon: null,
       supportEmail: 'help@college.edu',

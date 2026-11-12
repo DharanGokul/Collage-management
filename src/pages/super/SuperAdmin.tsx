@@ -87,7 +87,7 @@ export function SuperConsole() {
           students: db?.students.length ?? 0,
           staff: db?.staff.length ?? 0,
           collected: db?.payments.filter((p) => p.status === 'success').reduce((a, p) => a + p.amount + p.lateFee, 0) ?? 0,
-          color: db?.branding.primaryColor ?? '#4f46e5',
+          color: db?.branding.primaryColor ?? '#6d001a',
           logo: db?.branding.logo ?? null,
         }
       })

@@ -162,6 +162,64 @@ export interface Announcement {
   createdAt: string
 }
 
+export type EventKind = 'event' | 'exam' | 'holiday' | 'meeting' | 'fest' | 'workshop'
+
+export interface EventRegistration {
+  userId: string
+  role: 'student' | 'staff'
+  name: string
+  at: string
+  status: 'registered' | 'waitlisted'
+}
+
+export interface CampusEvent {
+  id: string
+  title: string
+  kind: EventKind
+  description: string
+  /** Local date-time `YYYY-MM-DDTHH:mm` (date only is used when allDay) */
+  start: string
+  end: string
+  allDay: boolean
+  location: string
+  audience: 'all' | 'students' | 'staff'
+  /** Restrict to these classes (`dept|year|section`); empty = every class */
+  classKeys: string[]
+  /** Exams: the subject being examined */
+  subjectId?: string
+  registration: { enabled: boolean; capacity: number | null; deadline: string | null }
+  registrations: EventRegistration[]
+  createdBy: string
+  createdAt: string
+}
+
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
+
+export interface TicketMessage {
+  id: string
+  by: 'admin' | 'requester'
+  name: string
+  text: string
+  at: string
+}
+
+export interface Ticket {
+  id: string
+  ref: string
+  kind: 'query' | 'complaint'
+  category: 'academics' | 'fees' | 'attendance' | 'exams' | 'facilities' | 'hostel' | 'transport' | 'conduct' | 'other'
+  subject: string
+  priority: 'low' | 'normal' | 'high' | 'urgent'
+  status: TicketStatus
+  anonymous: boolean
+  from: { role: 'student' | 'staff'; userId: string; name: string }
+  createdAt: string
+  updatedAt: string
+  messages: TicketMessage[]
+  unreadByAdmin: boolean
+  unreadByRequester: boolean
+}
+
 export interface Database {
   branding: Branding
   domain: DomainSettings
@@ -179,6 +237,8 @@ export interface Database {
   fees: FeeItem[]
   payments: Payment[]
   announcements: Announcement[]
+  events: CampusEvent[]
+  tickets: Ticket[]
 }
 
 export interface Session {

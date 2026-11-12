@@ -1,6 +1,6 @@
 # College Management System (front-end)
 
-A multi-college (multi-tenant), white-label college ERP front-end built with **React 19 + TypeScript + Vite**.
+A multi-college (multi-tenant), white-label college ERP front-end built with **React 19 + TypeScript + Vite + GSAP**, styled with the **Caesar** design system.
 There is no backend: all data is stored in the browser's `localStorage`. Each college gets realistic demo data when it is created.
 
 ```bash
@@ -39,11 +39,33 @@ In demo mode any password with 4+ characters works. The login page also lists ev
   - **Email sending:** custom SMTP, SendGrid, Mailgun, Amazon SES or an HTTPS relay; sender name, from address and reply-to; footer; test email
   - **Data:** JSON backup and restore, reset to the demo data
 
+### Events, exams & calendar (all roles)
+- **Admin** creates events (fest, workshop, meeting, holiday, general) and **schedules exams** per subject/class, with an optional "email the audience" notice, seat limits, apply-by deadlines and a clash warning for exams in the same class and slot.
+- **Students & staff apply** for events from the Events page, the calendar or their dashboard. Full events put applicants on a waitlist that is promoted automatically when a seat frees up. Admins can see and export the registration list.
+- **Calendar** for every role: week view with a time grid, multi-day bars and a "now" line; month and list views; filters by kind (exams, events, fests, workshops, meetings, holidays, fee due dates, "my classes"); a mini month calendar; and an "Open for registration" side panel. On phones the week view becomes a day strip with an agenda for the selected day.
+
+### Help desk — queries & complaints
+- Students and staff **raise queries or file complaints** (category, priority, and complaints can be anonymous) and follow the conversation thread.
+- Admins work through a **help desk inbox**: filter by status and type, read threads, reply (optionally also by email), set status and priority, and resolve tickets. Unread counts show as badges in the nav, the tab bar and the notifications bell.
+
 ### Staff
 Dashboard with today's classes, marking attendance for each period (Present / Late / Absent, including extra classes), personal timetable, and attendance for the students they teach.
 
 ### Student
 Dashboard, fee payment (demo checkout by UPI, card or net banking, with a printable receipt and a receipt email), attendance by subject (including how many classes are needed to reach 75%), and the class timetable.
+
+## Design system — Caesar
+The UI uses the **Caesar** design system: Black leads, Burgundy speaks once, White gives room.
+- The tokens in `src/index.css` mirror the system's `tokens.json`. **Noir** (dark) is the default theme and **Marble** (light) is the alternative.
+- Display type is Archivo Black in capitals; body text is Figtree.
+- Cards and colour slabs are square; buttons and inputs use an 8px radius; chips are pills. There are no shadows or gradients.
+- The accent defaults to Burgundy. Each college can replace it with its own brand colour, and `src/lib/theme.ts` derives the pressed state, the text colour on the accent, and accent-text tints with enough contrast in both themes.
+- Two sets of colours were added beyond the brand palette: status colours (ok, warn, danger, info) and agenda kind colours. Kinds always show a short code as well, so colour is never the only signal.
+
+## Motion & speed
+- **Liquid navigation:** when you switch pages, the highlight in the top pill nav and in the mobile tab bar stretches across to the new item, then settles onto it (`src/components/LiquidNav.tsx`).
+- **Page entry:** each page's blocks rise into place over about 0.3s using transforms only, so the animation never forces a re-layout. Sheets and popovers slide in. Animations switch off when the user has asked for reduced motion.
+- **Code splitting:** every page is its own chunk of 3–7 KB gzipped. Pages are prefetched when you hover a nav item, and all of a role's pages load in the background while the browser is idle. A page that has already been prefetched renders straight away, without React's Suspense delay (`src/routes.ts`).
 
 ## White-labelling: how the college is found from the URL
 `src/lib/tenant.ts` works out which college to show, checking in this order:

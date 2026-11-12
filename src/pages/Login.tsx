@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { prefetch } from '../routes'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ShieldCheck, Users, GraduationCap, Mail, Phone, MapPin, Ban } from 'lucide-react'
 import { getTenant } from '../lib/tenant'
@@ -22,6 +23,8 @@ export default function Login() {
   const [password, setPassword] = useState('demo1234')
   const [error, setError] = useState<string | null>(null)
   const b = db.branding
+  // Warm the selected role's dashboard chunk while the user types their credentials.
+  useEffect(() => prefetch(`/${role}`), [role])
 
   const demoUsers = useMemo(
     () =>
@@ -69,7 +72,11 @@ export default function Login() {
 
   return (
     <div className="login">
-      <div className="login-hero">
+      <div className="login-hero" aria-hidden={false}>
+        {/* Caesar slabs: Black 3 : Accent 2 : White 1 */}
+        <div className="slab slab-black" />
+        <div className="slab slab-accent"><span className="slab-word">{(b.shortName || b.collegeName).split(' ')[0]}</span></div>
+        <div className="slab slab-white" />
         <div className="login-hero-inner">
           <div className="login-brand">
             <Logo size={48} />
@@ -82,7 +89,7 @@ export default function Login() {
           <ul className="login-points">
             <li>Online fee payment with instant receipts</li>
             <li>Period-wise attendance for every class</li>
-            <li>Live timetables for students and faculty</li>
+            <li>Events, exams and a help desk in one calendar</li>
           </ul>
           <div className="login-contact">
             {b.supportEmail && (

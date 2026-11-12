@@ -1,22 +1,30 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Database, EmailLog, Role, Session } from '../types'
 import { createSeed } from '../lib/seed'
+import { seedEvents, seedTickets } from '../lib/seedCampus'
 import { applyTheme } from '../lib/theme'
 import { getTenant, portalUrl, resolveTenant, upsertTenant, type ResolvedTenant, type TenantPlan } from '../lib/tenant'
 import { sendEmail, validateEmailSettings, type OutgoingEmail } from '../lib/email'
 import { renderTemplate, uid } from '../lib/utils'
 
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 const EMAIL_CONCURRENCY = 8
 const dbKey = (t: string) => `cms:db:${t}`
 const sessionKey = (t: string) => `cms:session:${t}`
+
+/** v1 → v2: add events/exams and help-desk tickets to existing colleges. */
+function migrate(db: Database): Database {
+  if (!Array.isArray(db.events)) db.events = seedEvents(db)
+  if (!Array.isArray(db.tickets)) db.tickets = seedTickets(db)
+  return db
+}
 
 export function readTenantDb(id: string): Database | null {
   try {
     const raw = localStorage.getItem(dbKey(id))
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (parsed?.v === SCHEMA_VERSION && parsed.db) return parsed.db as Database
+      if ((parsed?.v === SCHEMA_VERSION || parsed?.v === 1) && parsed.db) return migrate(parsed.db as Database)
     }
   } catch {
     /* corrupt entry */

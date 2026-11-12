@@ -3,7 +3,7 @@ import type { Branding } from '../types'
 export const HEX_RE = /^#([0-9a-f]{6})$/i
 
 function hexToRgb(hex: string): [number, number, number] {
-  const m = HEX_RE.exec(hex) ?? HEX_RE.exec('#4f46e5')!
+  const m = HEX_RE.exec(hex) ?? HEX_RE.exec('#6d001a')!
   const n = parseInt(m[1], 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
@@ -30,19 +30,34 @@ export function contrastRatio(a: string, b: string) {
 }
 
 /** White or near-black text, whichever reads better on the brand colour. */
-export const contrastText = (hex: string) => (contrastRatio(hex, '#ffffff') >= 3 ? '#ffffff' : '#111827')
+export const contrastText = (hex: string) => (contrastRatio(hex, '#ffffff') >= 4.5 ? '#ffffff' : '#000000')
 
 /** Sets every brand-derived CSS variable from one hex colour. */
+export const DEFAULT_ACCENT = '#6d001a' // Caesar Burgundy
+
+/** Move a colour toward `target` until it reaches `ratio` contrast against `bg`. */
+function ensureContrast(hex: string, bg: string, ratio: number, target: [number, number, number]) {
+  let c = hex
+  for (let k = 0; k <= 20 && contrastRatio(c, bg) < ratio; k++) c = mix(hex, target, k / 20)
+  return c
+}
+
+/**
+ * Applies a college's brand colour as the Caesar accent. Derives the pressed
+ * state, readable on-accent text, and an accent-text tint for each theme
+ * (Noir needs a light tint: Burgundy on Black is only 1.7:1).
+ */
 export function applyPalette(hex: string) {
   const root = document.documentElement
-  const primary = HEX_RE.test(hex) ? hex : '#4f46e5'
-  const [r, g, bl] = hexToRgb(primary)
-  root.style.setProperty('--primary', primary)
-  root.style.setProperty('--primary-rgb', `${r} ${g} ${bl}`)
-  root.style.setProperty('--primary-hover', mix(primary, [0, 0, 0], 0.15))
-  root.style.setProperty('--primary-strong', mix(primary, [0, 0, 0], 0.35))
-  root.style.setProperty('--primary-contrast', contrastText(primary))
-  return primary
+  const accent = HEX_RE.test(hex) ? hex.toLowerCase() : DEFAULT_ACCENT
+  const [r, g, bl] = hexToRgb(accent)
+  root.style.setProperty('--accent', accent)
+  root.style.setProperty('--accent-rgb', `${r} ${g} ${bl}`)
+  root.style.setProperty('--accent-pressed', mix(accent, [0, 0, 0], 0.32))
+  root.style.setProperty('--on-accent', contrastText(accent))
+  root.style.setProperty('--accent-text-dark', accent === DEFAULT_ACCENT ? '#e8a1b0' : ensureContrast(accent, '#141414', 7, [255, 255, 255]))
+  root.style.setProperty('--accent-text-light', ensureContrast(accent, '#f4f2f2', 4.5, [0, 0, 0]))
+  return accent
 }
 
 export function applyTheme(b: Branding) {
@@ -67,11 +82,11 @@ export function applyTheme(b: Branding) {
 /** Monogram favicon in the brand colour, used until a custom favicon is uploaded. */
 export function generatedFavicon(name: string, color: string) {
   const letter = (name.trim()[0] || 'C').toUpperCase().replace(/[<>&"']/g, '')
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="${color}"/><text x="32" y="44" font-family="Inter,Arial,sans-serif" font-size="34" font-weight="700" text-anchor="middle" fill="${contrastText(color)}">${letter}</text></svg>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="${color}"/><text x="32" y="44" font-family="Archivo,Arial Black,sans-serif" font-size="34" font-weight="900" text-anchor="middle" fill="${contrastText(color)}">${letter}</text></svg>`
   return 'data:image/svg+xml,' + encodeURIComponent(svg)
 }
 
-export const PRESET_COLORS = ['#4f46e5', '#2563eb', '#0891b2', '#059669', '#65a30d', '#d97706', '#dc2626', '#db2777', '#7c3aed', '#0f172a']
+export const PRESET_COLORS = ['#6d001a', '#000000', '#1f3a5f', '#0b5d4b', '#7a4b00', '#4b1d6b', '#8c1c13', '#2f4f4f', '#5a3e2b', '#1d4ed8']
 
 /**
  * Read an uploaded image and downscale it so it fits comfortably in

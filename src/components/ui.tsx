@@ -3,7 +3,7 @@ import { X, CheckCircle2, AlertCircle, Info, ChevronLeft, ChevronRight } from 'l
 import { useStore } from '../store/AppStore'
 import { initials } from '../lib/utils'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'ink'
 
 export function Button({
   variant = 'primary',

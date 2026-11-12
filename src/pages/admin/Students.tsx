@@ -1,4 +1,5 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Search, Pencil, Trash2, Download, Mail, GraduationCap } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
 import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, usePaged } from '../../components/ui'
@@ -22,10 +23,21 @@ const blank = (dept: string, section: string): Student => ({
 
 export default function Students() {
   const { db, update, toast, sendBulkEmail } = useStore()
-  const [q, setQ] = useState('')
+  const [params, setParams] = useSearchParams()
+  const [q, setQ] = useState(() => params.get('q') ?? '')
   const [dept, setDept] = useState('all')
   const [year, setYear] = useState('all')
   const [editing, setEditing] = useState<Student | null>(null)
+  // Deep links: ?new=1 opens the add form (Create menu); ?q= pre-fills search (global search).
+  useEffect(() => {
+    if (params.get('new')) {
+      setEditing(blank(db.departments[0]?.code ?? '', db.sections[0] ?? 'A'))
+      params.delete('new')
+      setParams(params, { replace: true })
+    }
+    const pq = params.get('q')
+    if (pq !== null) setQ(pq)
+  }, [params, setParams, db.departments, db.sections])
 
   // Per-student attendance & fee stats, computed once per data change instead of on every keystroke.
   const stats = useMemo(() => {

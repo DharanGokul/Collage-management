@@ -109,7 +109,7 @@ function BrandingTab() {
         </Card>
         <Card title="Primary colour">
           <div className="color-row">
-            <input type="color" className="color-input" value={HEX_RE.test(b.primaryColor) ? b.primaryColor : '#4f46e5'} onChange={(e) => { set('primaryColor', e.target.value); setHexInput(e.target.value) }} aria-label="Pick colour" />
+            <input type="color" className="color-input" value={HEX_RE.test(b.primaryColor) ? b.primaryColor : '#6d001a'} onChange={(e) => { set('primaryColor', e.target.value); setHexInput(e.target.value) }} aria-label="Pick colour" />
             <input className="input mono" style={{ width: 120 }} value={hexInput} onChange={(e) => { const v = e.target.value.trim(); setHexInput(v); if (HEX_RE.test(v)) set('primaryColor', v.toLowerCase()) }} aria-label="Hex colour" />
             <div className="swatches">
               {PRESET_COLORS.map((c) => <button key={c} className={`swatch ${b.primaryColor === c ? 'on' : ''}`} style={{ background: c }} aria-label={`Use ${c}`} onClick={() => { set('primaryColor', c); setHexInput(c) }} />)}
@@ -131,9 +131,9 @@ function BrandingTab() {
       </div>
       <div className="sticky">
         <Card title="Live preview">
-          <div className="brand-preview" style={{ ['--primary' as string]: b.primaryColor, ['--primary-contrast' as string]: HEX_RE.test(b.primaryColor) ? contrastText(b.primaryColor) : '#fff' }}>
+          <div className="brand-preview" style={{ ['--accent' as string]: b.primaryColor, ['--on-accent' as string]: HEX_RE.test(b.primaryColor) ? contrastText(b.primaryColor) : '#fff' }}>
             <div className="bp-browser">
-              <img src={b.favicon ?? generatedFavicon(b.shortName || b.collegeName, HEX_RE.test(b.primaryColor) ? b.primaryColor : '#4f46e5')} alt="" />
+              <img src={b.favicon ?? generatedFavicon(b.shortName || b.collegeName, HEX_RE.test(b.primaryColor) ? b.primaryColor : '#6d001a')} alt="" />
               <span>{b.collegeName || 'College'} · Portal</span>
             </div>
             <div className="bp-body">
