@@ -1,4 +1,5 @@
 import type { Branding } from '../types'
+import { setCollegeDefault } from './themeMode'
 
 export const HEX_RE = /^#([0-9a-f]{6})$/i
 
@@ -61,6 +62,7 @@ export function applyPalette(hex: string) {
 }
 
 export function applyTheme(b: Branding) {
+  setCollegeDefault(b.defaultTheme)
   const primary = applyPalette(b.primaryColor)
 
   document.title = b.collegeName ? `${b.collegeName} · Portal` : 'Campus Portal'

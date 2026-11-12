@@ -1,7 +1,7 @@
 import { useCallback, useRef, useSyncExternalStore, type MouseEvent } from 'react'
 import { Sun, Moon, SunMoon } from 'lucide-react'
 import { useLiquidBlob } from './LiquidNav'
-import { autoHint, getThemeState, setThemeMode, subscribeTheme, type ThemeMode } from '../lib/themeMode'
+import { autoHint, followCollegeDefault, getThemeState, setThemeMode, subscribeTheme, type ThemeMode } from '../lib/themeMode'
 
 export function useThemeMode() {
   return useSyncExternalStore(subscribeTheme, getThemeState, getThemeState)
@@ -52,6 +52,28 @@ export default function ThemeSwitch({ compact = true, className = '' }: { compac
         )
       })}
       {!compact && <span className="sr-only" aria-live="polite">{mode === 'auto' ? `Auto, currently ${theme === 'light' ? 'day' : 'night'}` : ''}</span>}
+    </div>
+  )
+}
+
+/** Labelled switch plus "college default" status (mobile sheet). */
+export function ThemeSwitchWithDefault() {
+  const { followsCollege, collegeDefault } = useThemeMode()
+  return (
+    <div className="stack-s">
+      <ThemeSwitch compact={false} />
+      <span className="tiny muted">
+        {followsCollege ? (
+          <>Following your college's default ({collegeDefault})</>
+        ) : (
+          <>
+            Your choice on this device ·{' '}
+            <button type="button" className="link" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => followCollegeDefault()}>
+              use college default ({collegeDefault})
+            </button>
+          </>
+        )}
+      </span>
     </div>
   )
 }

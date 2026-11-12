@@ -16,14 +16,17 @@ export type ResolvedTheme = 'light' | 'dark'
 export const DAY_START = 6 // 6 AM
 export const NIGHT_START = 18 // 6 PM
 
-const KEY = 'cms:theme-mode'
+const KEY = 'cms:theme-mode' // personal choice on this device
+const COLLEGE_KEY = 'cms:college-theme' // last known college default (avoids a flash before data loads)
 
 export const isDaytime = (d = new Date()) => d.getHours() >= DAY_START && d.getHours() < NIGHT_START
 
-function readMode(): ThemeMode {
+const isMode = (m: unknown): m is ThemeMode => m === 'day' || m === 'night' || m === 'auto'
+
+function readPersonal(): ThemeMode | null {
   try {
     const m = localStorage.getItem(KEY)
-    if (m === 'day' || m === 'night' || m === 'auto') return m
+    if (isMode(m)) return m
     // Migrate the earlier two-state preference.
     const old = localStorage.getItem('cms:theme')
     if (old === 'dark') return 'night'
@@ -31,18 +34,36 @@ function readMode(): ThemeMode {
   } catch {
     /* storage blocked */
   }
+  return null
+}
+function readCollege(): ThemeMode {
+  try {
+    const m = localStorage.getItem(COLLEGE_KEY)
+    if (isMode(m)) return m
+  } catch {
+    /* ignore */
+  }
   return 'auto'
 }
 
 const resolve = (m: ThemeMode): ResolvedTheme => (m === 'auto' ? (isDaytime() ? 'light' : 'dark') : m === 'day' ? 'light' : 'dark')
 
 export interface ThemeState {
+  /** Effective mode: the personal choice, else the college default */
   mode: ThemeMode
   theme: ResolvedTheme
+  /** True when this device follows the college default */
+  followsCollege: boolean
+  collegeDefault: ThemeMode
 }
 
-let state: ThemeState = { mode: readMode(), theme: 'dark' }
-state = { ...state, theme: resolve(state.mode) }
+let personal = readPersonal()
+let college = readCollege()
+const build = (): ThemeState => {
+  const mode = personal ?? college
+  return { mode, theme: resolve(mode), followsCollege: personal === null, collegeDefault: college }
+}
+let state: ThemeState = build()
 const listeners = new Set<() => void>()
 
 function apply(t: ResolvedTheme) {
@@ -90,17 +111,49 @@ function emit() {
   listeners.forEach((l) => l())
 }
 
+function commit(origin?: { x: number; y: number }) {
+  const next = build()
+  transition(next.theme, origin)
+  state = next
+  emit()
+  scheduleAuto()
+}
+
+/** Personal choice on this device; overrides the college default. */
 export function setThemeMode(mode: ThemeMode, origin?: { x: number; y: number }) {
   try {
     localStorage.setItem(KEY, mode)
+    localStorage.removeItem('cms:theme')
   } catch {
     /* ignore */
   }
-  const theme = resolve(mode)
-  transition(theme, origin)
-  state = { mode, theme }
-  emit()
-  scheduleAuto()
+  personal = mode
+  commit(origin)
+}
+
+/** Forget the personal choice and follow the college default again. */
+export function followCollegeDefault(origin?: { x: number; y: number }) {
+  try {
+    localStorage.removeItem(KEY)
+    localStorage.removeItem('cms:theme')
+  } catch {
+    /* ignore */
+  }
+  personal = null
+  commit(origin)
+}
+
+/** Called whenever the college's branding loads or changes. */
+export function setCollegeDefault(mode: ThemeMode | undefined) {
+  const m = isMode(mode) ? mode : 'auto'
+  try {
+    localStorage.setItem(COLLEGE_KEY, m)
+  } catch {
+    /* ignore */
+  }
+  if (m === college) return
+  college = m
+  commit()
 }
 
 export const getThemeState = () => state
@@ -126,13 +179,8 @@ function msToNextBoundary(now = new Date()) {
 }
 function recheck() {
   if (state.mode !== 'auto') return
-  const theme = resolve('auto')
-  if (theme !== state.theme) {
-    transition(theme)
-    state = { ...state, theme }
-    emit()
-  }
-  scheduleAuto()
+  if (resolve('auto') !== state.theme) commit()
+  else scheduleAuto()
 }
 function scheduleAuto() {
   clearTimeout(timer)

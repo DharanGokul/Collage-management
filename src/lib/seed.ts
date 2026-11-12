@@ -266,6 +266,7 @@ export function createSeed(collegeName = 'Northbridge Institute of Technology'):
       address: '12 Knowledge Park, Bengaluru 560001',
       loginHeadline: 'One portal for academics, attendance & fees',
       currency: 'INR',
+      defaultTheme: 'auto',
     },
     domain: {
       subdomain: 'northbridge',

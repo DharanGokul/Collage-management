@@ -12,6 +12,8 @@ export interface Branding {
   address: string
   loginHeadline: string
   currency: string
+  /** Theme for people who haven't chosen their own (Day = Marble, Night = Noir, Auto = by time of day). */
+  defaultTheme?: 'day' | 'night' | 'auto'
 }
 
 export interface DomainSettings {

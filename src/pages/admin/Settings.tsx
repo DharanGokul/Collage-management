@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Palette, Globe, Mail, Database as DbIcon, Upload, Trash2, Copy, CheckCircle2, XCircle, Loader2, ExternalLink, Send, Download, RotateCcw, ShieldCheck } from 'lucide-react'
+import { Sun, Moon, SunMoon, Palette, Globe, Mail, Database as DbIcon, Upload, Trash2, Copy, CheckCircle2, XCircle, Loader2, ExternalLink, Send, Download, RotateCcw, ShieldCheck } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
 import { Badge, Button, Card, Field, Logo, PageHeader, Tabs } from '../../components/ui'
 import { PRESET_COLORS, HEX_RE, applyPalette, contrastRatio, contrastText, readImage, generatedFavicon } from '../../lib/theme'
@@ -8,6 +8,8 @@ import { DOMAIN_RE, PLATFORM_DOMAIN, SLUG_RE, checkAvailability, portalUrl, prev
 import { PROVIDERS, sendEmail, validateEmailSettings } from '../../lib/email'
 import { formatDate, isValidEmail } from '../../lib/utils'
 import type { Branding, DomainSettings, EmailSettings } from '../../types'
+import { useThemeMode } from '../../components/ThemeSwitch'
+import { DAY_START, NIGHT_START, followCollegeDefault } from '../../lib/themeMode'
 
 type Tab = 'branding' | 'domain' | 'email' | 'data'
 
@@ -107,6 +109,9 @@ function BrandingTab() {
             <ImageUpload label="Favicon" hint="Square, at least 64×64 px" value={b.favicon} onChange={(v) => set('favicon', v)} max={128} preview="favicon" />
           </div>
         </Card>
+        <Card title="Default theme">
+          <DefaultTheme value={b.defaultTheme ?? 'auto'} onChange={(v) => set('defaultTheme', v)} />
+        </Card>
         <Card title="Primary colour">
           <div className="color-row">
             <input type="color" className="color-input" value={HEX_RE.test(b.primaryColor) ? b.primaryColor : '#6d001a'} onChange={(e) => { set('primaryColor', e.target.value); setHexInput(e.target.value) }} aria-label="Pick colour" />
@@ -154,6 +159,41 @@ function BrandingTab() {
           </div>
         </Card>
       </div>
+    </div>
+  )
+}
+
+const hour = (h: number) => new Date(2000, 0, 1, h).toLocaleTimeString(undefined, { hour: 'numeric' })
+const THEME_OPTIONS = [
+  { id: 'day', label: 'Day', sub: 'Marble · light', Icon: Sun },
+  { id: 'night', label: 'Night', sub: 'Noir · dark', Icon: Moon },
+  { id: 'auto', label: 'Auto', sub: `Day ${hour(DAY_START)}–${hour(NIGHT_START)}, night after`, Icon: SunMoon },
+] as const
+
+function DefaultTheme({ value, onChange }: { value: NonNullable<Branding['defaultTheme']>; onChange: (v: NonNullable<Branding['defaultTheme']>) => void }) {
+  const mine = useThemeMode()
+  return (
+    <div className="stack">
+      <p className="muted tiny">What students, staff and admins see until they pick their own theme with the Day / Night / Auto switch.</p>
+      <div className="theme-cards" role="radiogroup" aria-label="Default theme">
+        {THEME_OPTIONS.map(({ id, label, sub, Icon }) => (
+          <button key={id} type="button" role="radio" aria-checked={value === id} className={`theme-card ${value === id ? 'active' : ''}`} onClick={() => onChange(id)}>
+            <span className={`theme-thumb ${id}`} aria-hidden>
+              <span /><span /><span />
+            </span>
+            <span className="row gap-s"><Icon size={16} /><strong>{label}</strong></span>
+            <small className="muted">{sub}</small>
+          </button>
+        ))}
+      </div>
+      {!mine.followsCollege && (
+        <div className="alert alert-info tiny">
+          <span>
+            On this device you picked <strong>{mine.mode}</strong>, which overrides the college default.{' '}
+            <button type="button" className="link" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => followCollegeDefault()}>Use college default here</button>
+          </span>
+        </div>
+      )}
     </div>
   )
 }

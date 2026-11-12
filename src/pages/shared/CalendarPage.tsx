@@ -150,7 +150,7 @@ export default function CalendarPage() {
         <div className="chip-scroll">
           <button className={`chip ${kinds.size === visibleKinds.length ? 'active' : ''}`} onClick={() => setKinds(new Set(kinds.size === visibleKinds.length ? [] : visibleKinds))}>All</button>
           {visibleKinds.map((k) => (
-            <button key={k} className={`chip ${kinds.has(k) ? 'active' : ''}`} aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)} style={kindStyle(k)}>
+            <button key={k} className={`chip ${kinds.has(k) ? 'soft-on' : ''}`} aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)} style={kindStyle(k)}>
               <span className="kind-dot" /> {k === 'class' ? 'My classes' : KIND_LABEL[k]}
             </button>
           ))}

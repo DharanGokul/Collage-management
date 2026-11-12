@@ -9,7 +9,7 @@ import { useStore } from '../store/AppStore'
 import { Avatar, Logo, Toasts } from './ui'
 import { LiquidNav, useActiveIndex, useLiquidBlob, type NavItem } from './LiquidNav'
 import { PageEnter, useEnter } from './motion'
-import ThemeSwitch from './ThemeSwitch'
+import ThemeSwitch, { ThemeSwitchWithDefault } from './ThemeSwitch'
 import { prefetch, prefetchRole } from '../routes'
 import type { Database, Role, Session } from '../types'
 import { agenda, countdown, fmtTime } from '../lib/agenda'
@@ -478,7 +478,7 @@ export default function Layout() {
         <Sheet title={session.name} onClose={() => setSheet(null)}>
           <div className="sheet-theme">
             <span className="spec">Appearance</span>
-            <ThemeSwitch compact={false} />
+            <ThemeSwitchWithDefault />
           </div>
           <div className="sheet-grid">
             {all.map((n) => (
