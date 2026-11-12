@@ -1,5 +1,6 @@
 import type { Branding } from '../types'
 import { setCollegeDefault } from './themeMode'
+import { resolveSecondary, tint } from './color'
 
 export const HEX_RE = /^#([0-9a-f]{6})$/i
 
@@ -48,7 +49,7 @@ function ensureContrast(hex: string, bg: string, ratio: number, target: [number,
  * state, readable on-accent text, and an accent-text tint for each theme
  * (Noir needs a light tint: Burgundy on Black is only 1.7:1).
  */
-export function applyPalette(hex: string) {
+export function applyPalette(hex: string, secondaryHex?: string) {
   const root = document.documentElement
   const accent = HEX_RE.test(hex) ? hex.toLowerCase() : DEFAULT_ACCENT
   const [r, g, bl] = hexToRgb(accent)
@@ -58,12 +59,25 @@ export function applyPalette(hex: string) {
   root.style.setProperty('--on-accent', contrastText(accent))
   root.style.setProperty('--accent-text-dark', accent === DEFAULT_ACCENT ? '#e8a1b0' : ensureContrast(accent, '#141414', 7, [255, 255, 255]))
   root.style.setProperty('--accent-text-light', ensureContrast(accent, '#f4f2f2', 4.5, [0, 0, 0]))
+
+  // Secondary accent (derived by harmony unless a custom one is set)
+  const sec = secondaryHex && HEX_RE.test(secondaryHex) ? secondaryHex.toLowerCase() : resolveSecondary(accent, 'analogous', null)
+  const [sr, sg, sb] = hexToRgb(sec)
+  root.style.setProperty('--secondary', sec)
+  root.style.setProperty('--secondary-rgb', `${sr} ${sg} ${sb}`)
+  root.style.setProperty('--on-secondary', contrastText(sec))
+  root.style.setProperty('--secondary-text-dark', ensureContrast(sec, '#141414', 7, [255, 255, 255]))
+  root.style.setProperty('--secondary-text-light', ensureContrast(sec, '#f4f2f2', 4.5, [0, 0, 0]))
+  // Day-mode background washes follow the brand
+  root.style.setProperty('--tint-1', tint(sec, 0.8))
+  root.style.setProperty('--tint-2', tint(accent, 0.86))
+  root.style.setProperty('--tint-3', tint(sec, 0.9))
   return accent
 }
 
 export function applyTheme(b: Branding) {
   setCollegeDefault(b.defaultTheme)
-  const primary = applyPalette(b.primaryColor)
+  const primary = applyPalette(b.primaryColor, resolveSecondary(HEX_RE.test(b.primaryColor) ? b.primaryColor : DEFAULT_ACCENT, b.secondaryHarmony, b.secondaryColor))
 
   document.title = b.collegeName ? `${b.collegeName} · Portal` : 'Campus Portal'
 
@@ -88,7 +102,7 @@ export function generatedFavicon(name: string, color: string) {
   return 'data:image/svg+xml,' + encodeURIComponent(svg)
 }
 
-export const PRESET_COLORS = ['#6d001a', '#000000', '#1f3a5f', '#0b5d4b', '#7a4b00', '#4b1d6b', '#8c1c13', '#2f4f4f', '#5a3e2b', '#1d4ed8']
+export const PRESET_COLORS: string[] = ['#6d001a', '#000000', '#1f3a5f', '#0b5d4b', '#7a4b00', '#4b1d6b', '#8c1c13', '#2f4f4f', '#5a3e2b', '#1d4ed8']
 
 /**
  * Read an uploaded image and downscale it so it fits comfortably in

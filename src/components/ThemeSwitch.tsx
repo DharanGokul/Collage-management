@@ -1,6 +1,6 @@
 import { useCallback, useRef, useSyncExternalStore, type MouseEvent } from 'react'
 import { Sun, Moon, SunMoon } from 'lucide-react'
-import { useLiquidBlob } from './LiquidNav'
+import { useLiquidBlob, useLiquidHover } from './LiquidNav'
 import { autoHint, followCollegeDefault, getThemeState, setThemeMode, subscribeTheme, type ThemeMode } from '../lib/themeMode'
 
 export function useThemeMode() {
@@ -22,7 +22,8 @@ export default function ThemeSwitch({ compact = true, className = '' }: { compac
   const ref = useRef<HTMLDivElement>(null)
   const blob = useRef<HTMLSpanElement>(null)
   const measure = useCallback((el: HTMLElement) => ({ x: el.offsetLeft, w: el.offsetWidth }), [])
-  useLiquidBlob(ref, blob, OPTIONS.findIndex((o) => o.id === mode), measure)
+  const { lit, item, group } = useLiquidHover(OPTIONS.findIndex((o) => o.id === mode))
+  useLiquidBlob(ref, blob, lit, measure)
 
   const pick = (m: ThemeMode, e: MouseEvent<HTMLButtonElement>) => {
     const r = e.currentTarget.getBoundingClientRect()
@@ -30,9 +31,9 @@ export default function ThemeSwitch({ compact = true, className = '' }: { compac
   }
 
   return (
-    <div ref={ref} className={`theme-switch ${compact ? 'compact' : ''} ${className}`} role="radiogroup" aria-label="Theme">
+    <div ref={ref} className={`theme-switch ${compact ? 'compact' : ''} ${className}`} role="radiogroup" aria-label="Theme" {...group}>
       <span ref={blob} className="theme-blob" aria-hidden />
-      {OPTIONS.map(({ id, label, Icon }) => {
+      {OPTIONS.map(({ id, label, Icon }, i) => {
         const title = id === 'auto' ? `Auto · ${autoHint()}` : id === 'day' ? 'Day · Marble (light)' : 'Night · Noir (dark)'
         return (
           <button
@@ -43,8 +44,9 @@ export default function ThemeSwitch({ compact = true, className = '' }: { compac
             aria-checked={mode === id}
             aria-label={`${label} theme`}
             title={title}
-            className={`theme-opt ${mode === id ? 'active' : ''}`}
+            className={`theme-opt ${mode === id ? 'active' : ''} ${i === lit ? 'lit' : ''}`}
             onClick={(e) => pick(id, e)}
+            {...item(i)}
           >
             <Icon size={16} />
             {!compact && <span>{label}</span>}

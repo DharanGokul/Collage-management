@@ -1,4 +1,5 @@
-import { useEffect, useId, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { pillRect, useLiquidBlob, useLiquidHover } from './LiquidNav'
 import { X, CheckCircle2, AlertCircle, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '../store/AppStore'
 import { initials } from '../lib/utils'
@@ -101,6 +102,13 @@ export function Field({ label, hint, error, children, span }: { label: string; h
   )
 }
 
+/** Counts open modals/sheets; while any are open the toaster moves to the top so it never covers their buttons. */
+let overlays = 0
+export function overlayOpen(delta: 1 | -1) {
+  overlays = Math.max(0, overlays + delta)
+  document.body.classList.toggle('overlay-open', overlays > 0)
+}
+
 export function Modal({ open, title, onClose, children, footer, wide }: { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
   useEffect(() => {
     if (!open) return
@@ -108,9 +116,11 @@ export function Modal({ open, title, onClose, children, footer, wide }: { open: 
     window.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    overlayOpen(1)
     return () => {
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
+      overlayOpen(-1)
     }
   }, [open, onClose])
   if (!open) return null
@@ -140,13 +150,65 @@ export function Empty({ icon, title, children }: { icon?: ReactNode; title: stri
   )
 }
 
+/** Tabs with a liquid underline that glides between tabs and follows hover. */
 export function Tabs<T extends string>({ value, onChange, items }: { value: T; onChange: (v: T) => void; items: { id: T; label: string; icon?: ReactNode }[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const ink = useRef<HTMLSpanElement>(null)
+  const active = items.findIndex((i) => i.id === value)
+  const { lit, item, group } = useLiquidHover(active)
+  useLiquidBlob(ref, ink, lit, pillRect)
   return (
-    <div className="tabs" role="tablist">
-      {items.map((i) => (
-        <button key={i.id} role="tab" aria-selected={value === i.id} className={`tab ${value === i.id ? 'active' : ''}`} onClick={() => onChange(i.id)}>
-          {i.icon}
-          {i.label}
+    <div className="tabs" role="tablist" ref={ref} {...group}>
+      <span className="tab-ink" ref={ink} aria-hidden />
+      {items.map((it, i) => (
+        <button key={it.id} data-liquid role="tab" aria-selected={value === it.id} className={`tab ${value === it.id ? 'active' : ''} ${i === lit ? 'lit' : ''}`} onClick={() => onChange(it.id)} {...item(i)}>
+          {it.icon}
+          {it.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Single-choice pill switch with a liquid fill that follows hover. */
+export function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+  kind = 'radio',
+  className = '',
+}: {
+  value: T
+  onChange: (v: T) => void
+  options: { id: T; label: ReactNode; icon?: ReactNode; aria?: string }[]
+  label: string
+  kind?: 'radio' | 'tab'
+  className?: string
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const blob = useRef<HTMLSpanElement>(null)
+  const active = options.findIndex((o) => o.id === value)
+  const { lit, item, group } = useLiquidHover(active)
+  useLiquidBlob(ref, blob, lit, pillRect)
+  return (
+    <div ref={ref} className={`segmented liquid-seg ${className}`} role={kind === 'radio' ? 'radiogroup' : 'tablist'} aria-label={label} {...group}>
+      <span className="seg-blob" ref={blob} aria-hidden />
+      {options.map((o, i) => (
+        <button
+          key={o.id}
+          type="button"
+          data-liquid
+          role={kind}
+          aria-checked={kind === 'radio' ? value === o.id : undefined}
+          aria-selected={kind === 'tab' ? value === o.id : undefined}
+          aria-label={o.aria}
+          className={`${value === o.id ? 'active' : ''} ${i === lit ? 'lit' : ''}`}
+          onClick={() => onChange(o.id)}
+          {...item(i)}
+        >
+          {o.icon}
+          {o.label}
         </button>
       ))}
     </div>

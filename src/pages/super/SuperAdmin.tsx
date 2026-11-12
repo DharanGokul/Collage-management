@@ -1,8 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Building2, Plus, ExternalLink, Ban, PlayCircle, Trash2, LogOut, Search, GraduationCap, Users, ShieldCheck, Globe, Wallet, Copy } from 'lucide-react'
-import { Badge, Button, Card, Empty, Field, Modal, Stat, Toasts } from '../../components/ui'
+import { Badge, Button, Card, Empty, Field, Modal, Stat } from '../../components/ui'
 import { ThemeToggle } from '../../components/Layout'
+import Toaster from '../../components/Toaster'
 import { useStore, provisionTenant, readTenantDb, deleteTenantData } from '../../store/AppStore'
 import { PLATFORM_DOMAIN, SLUG_RE, listTenants, patchTenant, portalUrl, previewUrl, removeTenant, slugify, type TenantPlan, type TenantRef } from '../../lib/tenant'
 import { PRESET_COLORS } from '../../lib/theme'
@@ -183,7 +184,7 @@ export function SuperConsole() {
       </main>
       {creating && <OnboardModal existing={rows.map((r) => r.t)} onClose={() => setCreating(false)} onCreated={(name) => { setCreating(false); toast(`${name} is live`); refresh() }} />}
       {deleting && <DeleteModal t={deleting} onClose={() => setDeleting(null)} onDeleted={() => { toast(`${deleting.name} deleted`); setDeleting(null); refresh() }} />}
-      <Toasts />
+      <Toaster />
     </div>
   )
 }

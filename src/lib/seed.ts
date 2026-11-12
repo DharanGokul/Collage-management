@@ -12,6 +12,7 @@ import type {
 } from '../types'
 import { classKey, toISODate } from './utils'
 import { seedEvents, seedTickets } from './seedCampus'
+import { seedOperations } from './seedOps'
 
 // Deterministic PRNG so every fresh tenant gets the same demo data.
 function rng(seed: number) {
@@ -251,7 +252,7 @@ export function createSeed(collegeName = 'Northbridge Institute of Technology'):
   }
 
   const campus = { students, staff, subjects, departments, sections }
-  return {
+  const base = {
     events: seedEvents(campus),
     tickets: seedTickets(campus),
     branding: {
@@ -310,4 +311,5 @@ export function createSeed(collegeName = 'Northbridge Institute of Technology'):
       { id: 'ann-3', title: 'Tech fest registrations open', body: 'Register before the end of the month through the student council.', audience: 'students', createdAt: new Date(today.getTime() - 86400000 * 5).toISOString() },
     ],
   }
+  return seedOperations(base as unknown as Database)
 }

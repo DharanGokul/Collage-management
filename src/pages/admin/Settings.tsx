@@ -4,6 +4,8 @@ import { Sun, Moon, SunMoon, Palette, Globe, Mail, Database as DbIcon, Upload, T
 import { useStore } from '../../store/AppStore'
 import { Badge, Button, Card, Field, Logo, PageHeader, Tabs } from '../../components/ui'
 import { PRESET_COLORS, HEX_RE, applyPalette, contrastRatio, contrastText, readImage, generatedFavicon } from '../../lib/theme'
+import { HARMONIES, deriveSecondary, resolveSecondary } from '../../lib/color'
+import ColorPicker from '../../components/ColorPicker'
 import { DOMAIN_RE, PLATFORM_DOMAIN, SLUG_RE, checkAvailability, portalUrl, previewUrl, verifyDomain } from '../../lib/tenant'
 import { PROVIDERS, sendEmail, validateEmailSettings } from '../../lib/email'
 import { formatDate, isValidEmail } from '../../lib/utils'
@@ -76,16 +78,17 @@ function BrandingTab() {
   const { db, update, toast } = useStore()
   const [b, setB] = useState<Branding>(db.branding)
   const set = <K extends keyof Branding>(k: K, v: Branding[K]) => setB((p) => ({ ...p, [k]: v }))
-  const [hexInput, setHexInput] = useState(b.primaryColor)
   const dirty = JSON.stringify(b) !== JSON.stringify(db.branding)
+  const secondary = resolveSecondary(HEX_RE.test(b.primaryColor) ? b.primaryColor : '#6d001a', b.secondaryHarmony, b.secondaryColor)
   const ratio = HEX_RE.test(b.primaryColor) ? contrastRatio(b.primaryColor, contrastText(b.primaryColor)) : 0
   const valid = b.collegeName.trim().length > 1 && HEX_RE.test(b.primaryColor) && (!b.supportEmail || isValidEmail(b.supportEmail))
 
   // Live preview: theme follows unsaved changes; reverts if the user leaves without saving.
   useEffect(() => {
-    if (HEX_RE.test(b.primaryColor)) applyPalette(b.primaryColor)
-  }, [b.primaryColor])
-  useEffect(() => () => { applyPalette(db.branding.primaryColor) }, [db.branding.primaryColor])
+    if (HEX_RE.test(b.primaryColor)) applyPalette(b.primaryColor, secondary)
+  }, [b.primaryColor, secondary])
+  const saved = db.branding
+  useEffect(() => () => { applyPalette(saved.primaryColor, resolveSecondary(saved.primaryColor, saved.secondaryHarmony, saved.secondaryColor)) }, [saved.primaryColor, saved.secondaryHarmony, saved.secondaryColor])
 
   const save = () => {
     update((d) => { d.branding = { ...b, collegeName: b.collegeName.trim(), shortName: b.shortName.trim() } })
@@ -112,18 +115,50 @@ function BrandingTab() {
         <Card title="Default theme">
           <DefaultTheme value={b.defaultTheme ?? 'auto'} onChange={(v) => set('defaultTheme', v)} />
         </Card>
-        <Card title="Primary colour">
-          <div className="color-row">
-            <input type="color" className="color-input" value={HEX_RE.test(b.primaryColor) ? b.primaryColor : '#6d001a'} onChange={(e) => { set('primaryColor', e.target.value); setHexInput(e.target.value) }} aria-label="Pick colour" />
-            <input className="input mono" style={{ width: 120 }} value={hexInput} onChange={(e) => { const v = e.target.value.trim(); setHexInput(v); if (HEX_RE.test(v)) set('primaryColor', v.toLowerCase()) }} aria-label="Hex colour" />
-            <div className="swatches">
-              {PRESET_COLORS.map((c) => <button key={c} className={`swatch ${b.primaryColor === c ? 'on' : ''}`} style={{ background: c }} aria-label={`Use ${c}`} onClick={() => { set('primaryColor', c); setHexInput(c) }} />)}
+        <Card title="Brand colours">
+          <div className="brand-colours">
+            <div className="stack-s">
+              <span className="spec">Primary</span>
+              <ColorPicker label="Primary colour" value={HEX_RE.test(b.primaryColor) ? b.primaryColor : '#6d001a'} onChange={(c) => set('primaryColor', c)} presets={PRESET_COLORS} />
+              <p className="tiny muted">
+                Text on primary: <strong>{ratio.toFixed(1)}:1</strong> {ratio >= 4.5 ? <Badge tone="green">AA</Badge> : ratio >= 3 ? <Badge tone="amber">AA large</Badge> : <Badge tone="red">Low</Badge>}
+              </p>
+            </div>
+            <div className="stack-s">
+              <span className="spec">Secondary · based on primary</span>
+              <div className="harmony-grid" role="radiogroup" aria-label="Secondary colour">
+                {HARMONIES.map((h) => {
+                  const c = deriveSecondary(HEX_RE.test(b.primaryColor) ? b.primaryColor : '#6d001a', h.id)
+                  const on = (b.secondaryHarmony ?? 'analogous') === h.id
+                  return (
+                    <button key={h.id} type="button" role="radio" aria-checked={on} className={`harmony ${on ? 'on' : ''}`} onClick={() => set('secondaryHarmony', h.id)} title={h.hint}>
+                      <span className="harmony-sw"><i style={{ background: b.primaryColor }} /><i style={{ background: c }} /></span>
+                      <span>{h.label}</span>
+                    </button>
+                  )
+                })}
+                <button type="button" role="radio" aria-checked={b.secondaryHarmony === 'custom'} className={`harmony ${b.secondaryHarmony === 'custom' ? 'on' : ''}`} onClick={() => setB((p) => ({ ...p, secondaryHarmony: 'custom', secondaryColor: p.secondaryColor ?? secondary }))}>
+                  <span className="harmony-sw"><i style={{ background: b.primaryColor }} /><i style={{ background: b.secondaryColor ?? secondary }} /></span>
+                  <span>Custom</span>
+                </button>
+              </div>
+              {b.secondaryHarmony === 'custom' ? (
+                <ColorPicker label="Secondary colour" value={b.secondaryColor ?? secondary} onChange={(c) => set('secondaryColor', c)} />
+              ) : (
+                <p className="tiny muted">{HARMONIES.find((h) => h.id === (b.secondaryHarmony ?? 'analogous'))?.hint}. Updates automatically when the primary changes.</p>
+              )}
+              <div className="palette-strip" aria-label="Resulting palette">
+                {[
+                  { c: b.primaryColor, l: 'Primary' },
+                  { c: 'var(--accent-pressed)', l: 'Pressed' },
+                  { c: secondary, l: 'Secondary' },
+                  { c: 'var(--tint-1)', l: 'Day wash' },
+                  { c: 'var(--tint-2)', l: 'Day wash' },
+                ].map((x, i) => <span key={i} style={{ background: x.c }} title={x.l} />)}
+              </div>
+              <p className="tiny muted">Secondary is used for chips, progress bars, chart highlights, avatars, the Up next panel and the Day-mode background. Text on secondary: <strong>{contrastRatio(secondary, contrastText(secondary)).toFixed(1)}:1</strong></p>
             </div>
           </div>
-          {!HEX_RE.test(hexInput) && <small className="field-error">Use a 6-digit hex value like #1d4ed8</small>}
-          <p className="tiny muted mt-s">
-            Button text contrast: <strong>{ratio.toFixed(1)}:1</strong> {ratio >= 4.5 ? <Badge tone="green">AA</Badge> : ratio >= 3 ? <Badge tone="amber">AA large</Badge> : <Badge tone="red">Low</Badge>}
-          </p>
         </Card>
         <Card title="Contact & locale">
           <div className="form-grid">
@@ -155,7 +190,7 @@ function BrandingTab() {
           </div>
           <div className="row gap-s mt">
             <Button className="w-full" disabled={!dirty || !valid} onClick={save}>Save branding</Button>
-            <Button variant="secondary" disabled={!dirty} onClick={() => { setB(db.branding); setHexInput(db.branding.primaryColor) }}>Reset</Button>
+            <Button variant="secondary" disabled={!dirty} onClick={() => setB(db.branding)}>Reset</Button>
           </div>
         </Card>
       </div>

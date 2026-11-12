@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { prefetch } from '../routes'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { ShieldCheck, Users, GraduationCap, Mail, Phone, MapPin, Ban } from 'lucide-react'
+import { ShieldCheck, Users, GraduationCap, Mail, Phone, MapPin, Ban, Calculator } from 'lucide-react'
 import { getTenant } from '../lib/tenant'
 import { useStore } from '../store/AppStore'
-import { Button, Field, Logo } from '../components/ui'
+import { Button, Field, Logo, Segmented } from '../components/ui'
 import { ThemeToggle } from '../components/Layout'
 import type { Role } from '../types'
 
@@ -12,6 +12,7 @@ const ROLES: { id: Role; label: string; icon: ReactNode }[] = [
   { id: 'admin', label: 'Admin', icon: <ShieldCheck size={16} /> },
   { id: 'staff', label: 'Staff', icon: <Users size={16} /> },
   { id: 'student', label: 'Student', icon: <GraduationCap size={16} /> },
+  { id: 'accountant', label: 'Accounts', icon: <Calculator size={16} /> },
 ]
 
 export default function Login() {
@@ -29,11 +30,13 @@ export default function Login() {
   const demoUsers = useMemo(
     () =>
       role === 'staff'
-        ? db.staff.filter((s) => s.status === 'active').map((s) => ({ id: s.id, label: `${s.name} (${s.department})`, login: s.email }))
+        ? db.staff.filter((s) => s.status === 'active').map((s) => ({ id: s.id, label: `${s.name} (${s.department}${db.departments.some((d) => d.hodId === s.id) ? ' · HOD' : ''})`, login: s.email }))
+        : role === 'accountant'
+          ? db.accountants.filter((s) => s.status === 'active').map((s) => ({ id: s.id, label: `${s.name} (${s.designation})`, login: s.email }))
         : role === 'student'
           ? db.students.filter((s) => s.status === 'active').map((s) => ({ id: s.id, label: `${s.name} – ${s.rollNo}`, login: s.rollNo }))
           : [],
-    [role, db.staff, db.students],
+    [role, db.staff, db.students, db.accountants, db.departments],
   )
 
   if (session && !suspended) return <Navigate to={`/${session.role}`} replace />
@@ -41,7 +44,7 @@ export default function Login() {
   const switchRole = (r: Role) => {
     setRole(r)
     setError(null)
-    setIdentifier(r === 'admin' ? (adminEmail ?? 'admin@college.edu') : r === 'staff' ? (db.staff[0]?.email ?? '') : (db.students[0]?.rollNo ?? ''))
+    setIdentifier(r === 'admin' ? (adminEmail ?? 'admin@college.edu') : r === 'staff' ? (db.staff[0]?.email ?? '') : r === 'accountant' ? (db.accountants[0]?.email ?? '') : (db.students[0]?.rollNo ?? ''))
   }
 
   const submit = (e: FormEvent) => {
@@ -62,6 +65,13 @@ export default function Login() {
       if (s.status !== 'active') return setError('This account is inactive. Contact the administrator.')
       login('staff', s.id)
       return nav('/staff')
+    }
+    if (role === 'accountant') {
+      const a = db.accountants.find((x) => x.email.toLowerCase() === id || x.empId.toLowerCase() === id)
+      if (!a) return setError('No accounts staff found with that email or employee ID.')
+      if (a.status !== 'active') return setError('This account is inactive. Contact the administrator.')
+      login('accountant', a.id)
+      return nav('/accountant')
     }
     const s = db.students.find((x) => x.rollNo.toLowerCase() === id || x.email.toLowerCase() === id)
     if (!s) return setError('No student found with that roll number or email.')
@@ -120,16 +130,9 @@ export default function Login() {
           </div>
           <h2>Sign in</h2>
           <p className="muted">Choose your role to continue</p>
-          <div className="segmented" role="radiogroup" aria-label="Role">
-            {ROLES.map((r) => (
-              <button type="button" key={r.id} role="radio" aria-checked={role === r.id} className={role === r.id ? 'active' : ''} onClick={() => switchRole(r.id)}>
-                {r.icon}
-                {r.label}
-              </button>
-            ))}
-          </div>
+          <Segmented label="Role" value={role} onChange={switchRole} options={ROLES.map((r) => ({ id: r.id, label: r.label, icon: r.icon }))} />
 
-          <Field label={role === 'admin' ? 'Email' : role === 'staff' ? 'Email or employee ID' : 'Roll number or email'}>
+          <Field label={role === 'admin' ? 'Email' : role === 'staff' || role === 'accountant' ? 'Email or employee ID' : 'Roll number or email'}>
             {(id) => <input id={id} className="input" value={identifier} onChange={(e) => setIdentifier(e.target.value)} autoComplete="username" />}
           </Field>
           <Field label="Password">

@@ -17,6 +17,8 @@ npm run build     # static build in dist/ (works on any host / sub-path)
 | **Admin** | The college's administration | the college's admin email (any email works on the default demo college) |
 | **Staff** | Faculty | staff email or employee ID, e.g. `anita.krishnan@college.edu` |
 | **Student** | Students | roll number, e.g. `25CSE001` |
+| **Accounts** | Accounts office | `geetha.raman@college.edu` (Chief Accountant) |
+| HOD | Heads of department sign in as Staff | e.g. `anita.krishnan@college.edu` (CSE HOD) |
 
 In demo mode any password with 4+ characters works. The login page also lists every seeded user to pick from.
 
@@ -54,6 +56,27 @@ Dashboard with today's classes, marking attendance for each period (Present / La
 ### Student
 Dashboard, fee payment (demo checkout by UPI, card or net banking, with a printable receipt and a receipt email), attendance by subject (including how many classes are needed to reach 75%), and the class timetable.
 
+### Accounts portal
+- **Overview:** collections against expenses, bank balances, and a "Needs you" list (bills to pay, unreconciled bank lines, TDS due).
+- **Invoices:** fee invoices for each student (GST-inclusive, so exempt fees go out as a bill of supply) and GST tax invoices for other income, all printable.
+- **Bills:** vendor bills with CGST + SGST, or IGST for vendors in another state. TDS (194C, 194J, 194I, 194H, 194Q) is taken on the value before GST. Bills above the approval limit go to management first. Paying a bill also records the bank entry.
+- **Bank:** statements filtered by month or financial year, with running balances, CSV import and automatic or manual reconciliation.
+- **Taxes:** a monthly GST summary, a GSTR-1 view, the TDS register with challans and due dates, and tax settings (GSTIN, PAN, TAN, rates, approval limit).
+- **Reports:** collections, expenses, income & expenditure, dues with ageing, and a bank summary, by month or financial year (April–March), with CSV export and print to PDF.
+
+### HOD, requests and approvals
+- **Equipment and repair requests:** staff raise purchases, repairs and setups. Their HOD approves; purchases, and anything over the limit, also need management; accounts then records the bill.
+- **Leave:** applications with yearly balances. HODs approve their faculty's leave; management approves the HODs'.
+- **Student profile changes:** a student's new photo or details need their HOD's approval. Staff can change their own photo and contact details directly.
+- **HOD Department page:** faculty with today's classes and how many have attendance marked, attendance by class, and the department's requests.
+
+### Chat and live notifications
+- **Chats:** class groups (teachers and students), department groups, management with HODs, management with accounts, an all-staff announcement channel, and direct messages. Students can message only their own teachers, their HOD and the office.
+- **Live updates:** changes appear instantly in every open tab or window (the store syncs on browser storage events). Each notification slides in at the bottom right, one after another. Important ones stay until closed; while a modal is open, toasts move to the top so they never cover its buttons.
+
+### Analysis
+See [docs/college-needs-analysis.md](docs/college-needs-analysis.md) for the real-world gap analysis and recommended next steps.
+
 ## Design system — Caesar
 The UI uses the **Caesar** design system: Black leads, Burgundy speaks once, White gives room.
 - The tokens in `src/index.css` mirror the system's `tokens.json`, with two themes: **Night** (Noir, dark) and **Day** (Marble, light).
@@ -63,10 +86,14 @@ The UI uses the **Caesar** design system: Black leads, Burgundy speaks once, Whi
 - On request, the app softens Caesar's square, flat style: cards have 22px corners, inner tiles 16px, and buttons and inputs 12px, with soft shadows in both themes. The red (Burgundy) is the primary colour for the navigation highlight, active tabs, chips and toggles, the main buttons, today markers and badges.
 - Content spans the full width of the screen; there is no fixed-width container.
 - **Day theme follows the reference screenshots:** a soft mint-to-peach gradient background, semi-transparent white cards with 28px corners and very soft shadows, white inner tiles, sentence-case headings and a light sign-in page. Only the fixed bars, pop-ups and sheets blur what's behind them, which keeps clicks and typing fast. **Night** keeps the Caesar Noir look.
+- **Brand colours (Settings › Branding):** a colour picker for the primary colour (saturation/brightness area, hue slider, hex field, presets, and an eyedropper where the browser supports it). A **secondary colour** is derived from the primary by harmony (analogous, complementary, split, triadic or monochrome), or set by hand. It drives the chips, progress bars, chart highlights, avatars, the Up next panel and the Day-mode background tint, with readable text colours worked out for both themes.
 - The accent defaults to Burgundy. Each college can replace it with its own brand colour, and `src/lib/theme.ts` derives the pressed state, the text colour on the accent, and accent-text tints with enough contrast in both themes.
 - Two sets of colours were added beyond the brand palette: status colours (ok, warn, danger, info) and agenda kind colours. Kinds always show a short code as well, so colour is never the only signal.
 
 ## Motion & speed
+- **Liquid hover:** in the top menu, tool rail, tabs, switches and theme switch, the highlight follows the pointer and glides back to the current item when it leaves.
+- **Wave buttons:** on hover, a liquid wave rises through buttons and chips.
+- **Scroll reveal:** items further down a page rise into view as you scroll to them, and dashboard numbers count up the first time they appear. Hidden items stay keyboard-focusable and are revealed as soon as focus reaches them. The header turns frosted and shadowed once you scroll.
 - **Liquid navigation:** when you switch pages, the highlight in the top pill nav and in the mobile tab bar stretches across to the new item, then settles onto it (`src/components/LiquidNav.tsx`).
 - **Page entry:** each page's blocks rise into place over about 0.3s using transforms only, so the animation never forces a re-layout. Sheets and popovers slide in. Animations switch off when the user has asked for reduced motion.
 - **Code splitting:** every page is its own chunk of 3–7 KB gzipped. Pages are prefetched when you hover a nav item, and all of a role's pages load in the background while the browser is idle. A page that has already been prefetched renders straight away, without React's Suspense delay (`src/routes.ts`).

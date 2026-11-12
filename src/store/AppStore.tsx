@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { Database, EmailLog, Role, Session } from '../types'
+import type { AppNotification, Database, EmailLog, Role, Session } from '../types'
 import { createSeed } from '../lib/seed'
 import { seedEvents, seedTickets } from '../lib/seedCampus'
+import { seedOperations } from '../lib/seedOps'
 import { applyTheme } from '../lib/theme'
 import { getTenant, portalUrl, resolveTenant, upsertTenant, type ResolvedTenant, type TenantPlan } from '../lib/tenant'
 import { sendEmail, validateEmailSettings, type OutgoingEmail } from '../lib/email'
 import { renderTemplate, uid } from '../lib/utils'
 
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
 const EMAIL_CONCURRENCY = 8
 const dbKey = (t: string) => `cms:db:${t}`
 const sessionKey = (t: string) => `cms:session:${t}`
@@ -16,7 +17,8 @@ const sessionKey = (t: string) => `cms:session:${t}`
 function migrate(db: Database): Database {
   if (!Array.isArray(db.events)) db.events = seedEvents(db)
   if (!Array.isArray(db.tickets)) db.tickets = seedTickets(db)
-  return db
+  // v2 → v3: accounts, HOD workflow, chat, profile changes, notifications
+  return seedOperations(db)
 }
 
 export function readTenantDb(id: string): Database | null {
@@ -24,7 +26,7 @@ export function readTenantDb(id: string): Database | null {
     const raw = localStorage.getItem(dbKey(id))
     if (raw) {
       const parsed = JSON.parse(raw)
-      if ((parsed?.v === SCHEMA_VERSION || parsed?.v === 1) && parsed.db) return migrate(parsed.db as Database)
+      if (parsed?.v >= 1 && parsed?.v <= SCHEMA_VERSION && parsed.db) return migrate(parsed.db as Database)
     }
   } catch {
     /* corrupt entry */
@@ -113,11 +115,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const dbRef = useRef(db)
   dbRef.current = db
 
+  // Last JSON we wrote or received: lets us skip echoing a remote change back (no ping-pong between tabs).
+  const lastJson = useRef<string | null>(null)
+
   // Persist + keep the tenant registry in sync for domain resolution.
   useEffect(() => {
     if (tenant.missing) return
     try {
-      localStorage.setItem(dbKey(tenant.id), JSON.stringify({ v: SCHEMA_VERSION, db }))
+      const json = JSON.stringify({ v: SCHEMA_VERSION, db })
+      if (json !== lastJson.current) {
+        localStorage.setItem(dbKey(tenant.id), json)
+        lastJson.current = json
+      }
       setStorageError(null)
     } catch {
       setStorageError('Browser storage is full or blocked – recent changes may not be saved. Try a smaller logo.')
@@ -133,6 +142,26 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => applyTheme(db.branding), [db.branding])
 
+  // Realtime across tabs/windows: another tab saved → adopt its data immediately.
+  // (In production this is a websocket/SSE subscription to the college's channel.)
+  useEffect(() => {
+    if (tenant.missing) return
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== dbKey(tenant.id) || !e.newValue || e.newValue === lastJson.current) return
+      try {
+        const parsed = JSON.parse(e.newValue)
+        if (parsed?.db) {
+          lastJson.current = e.newValue
+          setDb(parsed.db as Database)
+        }
+      } catch {
+        /* ignore partial writes */
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [tenant.id, tenant.missing])
+
   const update = useCallback((fn: (draft: Database) => void) => {
     setDb((prev) => {
       const draft = structuredClone(prev)
@@ -143,8 +172,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const toast = useCallback((text: string, kind: Toast['kind'] = 'success') => {
     const id = uid('toast')
-    setToasts((t) => [...t, { id, kind, text }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000)
+    // Dismissal timing lives in the Toaster (pauses on hover, sequenced entry).
+    setToasts((t) => [...t.slice(-6), { id, kind, text }])
   }, [])
   const dismissToast = useCallback((id: string) => setToasts((t) => t.filter((x) => x.id !== id)), [])
 
@@ -153,10 +182,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       const d = dbRef.current
       const name =
         role === 'admin'
-          ? 'Administrator'
+          ? d.adminProfile?.name || 'Administrator'
           : role === 'staff'
             ? (d.staff.find((s) => s.id === userId)?.name ?? 'Staff')
-            : (d.students.find((s) => s.id === userId)?.name ?? 'Student')
+            : role === 'accountant'
+              ? (d.accountants.find((s) => s.id === userId)?.name ?? 'Accounts')
+              : (d.students.find((s) => s.id === userId)?.name ?? 'Student')
       const s: Session = { role, userId, name }
       sessionStorage.setItem(sessionKey(tenant.id), JSON.stringify(s))
       setSession(s)
@@ -220,6 +251,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [db, tenant, session, update, login, logout, toast, toasts, dismissToast, sendBulkEmail, resetDemo, storageError, suspended],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+}
+
+/**
+ * Queue a realtime notification for each recipient (memberKey `role:userId`).
+ * Call inside `update()`; recipients see it as a toast (live, in any open tab)
+ * and in the bell.
+ */
+export function notify(d: Database, to: string[], n: Omit<AppNotification, 'id' | 'to' | 'at' | 'link'> & { link?: string | ((to: string) => string) }) {
+  const at = new Date().toISOString()
+  for (const key of new Set(to)) d.notifications.push({ id: uid('ntf'), to: key, at, ...n, link: typeof n.link === 'function' ? n.link(key) : n.link })
+  if (d.notifications.length > 400) d.notifications = d.notifications.slice(-400)
 }
 
 export function useStore() {

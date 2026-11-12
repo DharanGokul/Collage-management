@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'staff' | 'student'
+export type Role = 'admin' | 'staff' | 'student' | 'accountant'
 
 export interface Branding {
   collegeName: string
@@ -14,6 +14,9 @@ export interface Branding {
   currency: string
   /** Theme for people who haven't chosen their own (Day = Marble, Night = Noir, Auto = by time of day). */
   defaultTheme?: 'day' | 'night' | 'auto'
+  /** Secondary accent: derived from the primary by harmony, or a custom colour */
+  secondaryHarmony?: 'analogous' | 'complementary' | 'split' | 'triadic' | 'mono' | 'custom'
+  secondaryColor?: string | null
 }
 
 export interface DomainSettings {
@@ -79,6 +82,7 @@ export interface Student {
   guardianPhone: string
   status: 'active' | 'inactive'
   joinedOn: string
+  photo?: string | null
 }
 
 export interface Staff {
@@ -91,6 +95,8 @@ export interface Staff {
   designation: string
   status: 'active' | 'inactive'
   joinedOn: string
+  photo?: string | null
+  bio?: string
 }
 
 export interface Subject {
@@ -222,13 +228,231 @@ export interface Ticket {
   unreadByRequester: boolean
 }
 
+/* ------------------------------ Accounts ------------------------------ */
+
+export interface Accountant {
+  id: string
+  empId: string
+  name: string
+  email: string
+  phone: string
+  designation: string
+  status: 'active' | 'inactive'
+  photo?: string | null
+}
+
+export interface AdminProfile {
+  name: string
+  email: string
+  phone: string
+  designation: string
+  photo: string | null
+}
+
+/** Student profile edits go to their HOD for approval. */
+export interface ProfileChange {
+  id: string
+  studentId: string
+  changes: Partial<Pick<Student, 'name' | 'email' | 'phone' | 'guardianName' | 'guardianPhone' | 'photo'>>
+  reason: string
+  status: 'pending' | 'approved' | 'rejected'
+  createdAt: string
+  decidedBy?: string
+  decidedAt?: string
+  note?: string
+}
+
+/** Realtime notification addressed to one member (role:userId). */
+export interface AppNotification {
+  id: string
+  to: string
+  title: string
+  body: string
+  link?: string
+  important: boolean
+  kind: 'chat' | 'approval' | 'request' | 'leave' | 'profile' | 'ticket' | 'event' | 'finance' | 'info'
+  at: string
+}
+
+export interface TaxSettings {
+  legalName: string
+  gstin: string
+  pan: string
+  tan: string
+  stateCode: string
+  /** GST % applied to fee categories. Fee amounts are treated as GST-inclusive. */
+  feeGst: Record<FeeItem['category'], number>
+  /** TDS % by Income-tax section, e.g. { '194C': 2 } */
+  tdsRates: Record<string, number>
+  /** Purchases above this need management approval after the HOD */
+  procurementApprovalLimit: number
+}
+
+export interface Vendor {
+  id: string
+  name: string
+  gstin: string
+  pan: string
+  state: string
+  email: string
+  phone: string
+}
+
+export interface LineItem {
+  description: string
+  qty: number
+  rate: number
+  gstRate: number
+}
+
+export type BillCategory = 'equipment' | 'maintenance' | 'utilities' | 'stationery' | 'services' | 'professional' | 'rent' | 'events' | 'other'
+
+export interface Bill {
+  id: string
+  billNo: string
+  vendorId: string
+  category: BillCategory
+  date: string
+  dueDate: string
+  items: LineItem[]
+  /** Inter-state supply → IGST; otherwise CGST + SGST */
+  interState: boolean
+  tdsSection: string | null
+  tdsRate: number
+  status: 'pending' | 'approved' | 'paid' | 'cancelled'
+  paidOn?: string
+  paymentRef?: string
+  bankAccountId?: string
+  requestId?: string
+  notes: string
+  createdBy: string
+}
+
+export interface Invoice {
+  id: string
+  invoiceNo: string
+  kind: 'fee' | 'other'
+  studentId?: string
+  feeId?: string
+  customer?: { name: string; gstin: string; email: string }
+  date: string
+  dueDate: string
+  items: LineItem[]
+  interState: boolean
+  /** Stored for 'other' invoices; fee invoices derive paid/unpaid from payments */
+  status: 'issued' | 'paid' | 'void'
+  paidOn?: string
+  paymentRef?: string
+}
+
+export interface BankAccount {
+  id: string
+  bank: string
+  branch: string
+  accountName: string
+  accountNo: string
+  ifsc: string
+  openingBalance: number
+  openingDate: string
+}
+
+export interface BankTxn {
+  id: string
+  accountId: string
+  date: string
+  description: string
+  ref: string
+  debit: number
+  credit: number
+  match?: { type: 'payment' | 'bill' | 'invoice' | 'manual'; id: string; note?: string }
+}
+
+export interface TdsDeposit {
+  id: string
+  month: string // YYYY-MM the TDS was deducted in
+  section: string
+  amount: number
+  challanNo: string
+  depositedOn: string
+}
+
+/* ------------------------------ Chat ------------------------------ */
+
+export interface ChatMember {
+  role: Role
+  userId: string
+}
+
+export interface ChatMessage {
+  id: string
+  from: ChatMember & { name: string }
+  text: string
+  at: string
+}
+
+export interface Chat {
+  id: string
+  kind: 'group' | 'direct'
+  name: string
+  topic: string
+  scope: 'class' | 'department' | 'staff' | 'management' | 'custom' | 'direct'
+  members: ChatMember[]
+  /** Only these member keys (role:userId) may post when announceOnly */
+  admins: string[]
+  announceOnly: boolean
+  createdBy: string
+  createdAt: string
+  messages: ChatMessage[]
+  /** memberKey → ISO time of last read */
+  reads: Record<string, string>
+}
+
+/* ------------------------------ Requests & leave ------------------------------ */
+
+export type RequestStatus = 'pending_hod' | 'pending_admin' | 'approved' | 'rejected' | 'in_progress' | 'completed'
+
+export interface DeptRequest {
+  id: string
+  ref: string
+  kind: 'purchase' | 'repair' | 'setup'
+  category: 'computer' | 'projector' | 'furniture' | 'lab' | 'network' | 'electrical' | 'av' | 'stationery' | 'other'
+  title: string
+  description: string
+  quantity: number
+  estimatedCost: number
+  location: string
+  department: string
+  priority: 'low' | 'normal' | 'high' | 'urgent'
+  requestedBy: { role: Role; userId: string; name: string }
+  createdAt: string
+  status: RequestStatus
+  timeline: { at: string; by: string; action: string; note?: string }[]
+  billId?: string
+}
+
+export interface LeaveRequest {
+  id: string
+  staffId: string
+  type: 'casual' | 'sick' | 'earned' | 'duty'
+  from: string
+  to: string
+  days: number
+  reason: string
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  approver: 'hod' | 'admin'
+  decidedBy?: string
+  decidedAt?: string
+  note?: string
+  createdAt: string
+}
+
 export interface Database {
   branding: Branding
   domain: DomainSettings
   email: EmailSettings
   templates: EmailTemplate[]
   emailLog: EmailLog[]
-  departments: { code: string; name: string }[]
+  departments: { code: string; name: string; hodId?: string | null }[]
   sections: string[]
   students: Student[]
   staff: Staff[]
@@ -241,6 +465,20 @@ export interface Database {
   announcements: Announcement[]
   events: CampusEvent[]
   tickets: Ticket[]
+  accountants: Accountant[]
+  tax: TaxSettings
+  vendors: Vendor[]
+  bills: Bill[]
+  invoices: Invoice[]
+  bankAccounts: BankAccount[]
+  bankTxns: BankTxn[]
+  tdsDeposits: TdsDeposit[]
+  chats: Chat[]
+  requests: DeptRequest[]
+  leaves: LeaveRequest[]
+  adminProfile: AdminProfile
+  profileChanges: ProfileChange[]
+  notifications: AppNotification[]
 }
 
 export interface Session {

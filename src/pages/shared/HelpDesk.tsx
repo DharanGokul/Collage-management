@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Search, Send, ArrowLeft, MessageSquareText, AlertTriangle, CheckCircle2, RotateCcw, ShieldAlert } from 'lucide-react'
-import { useStore } from '../../store/AppStore'
-import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader, Stat } from '../../components/ui'
+import { notify, useStore } from '../../store/AppStore'
+import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader, Segmented, Stat } from '../../components/ui'
 import { gsap, prefersReducedMotion } from '../../components/motion'
 import { formatDate, uid } from '../../lib/utils'
 import type { Ticket, TicketStatus } from '../../types'
@@ -189,7 +189,9 @@ function TicketThread({ ticket, onBack }: { ticket: Ticket; onBack: () => void }
       if (isAdmin) {
         t.unreadByRequester = true
         t.status = resolve ? 'resolved' : t.status === 'open' ? 'in_progress' : t.status
+        notify(d, [`${t.from.role}:${t.from.userId}`], { kind: 'ticket', important: resolve, title: resolve ? `Resolved: ${t.subject}` : `Reply from the office · ${t.ref}`, body: body || 'Your ticket was marked resolved.', link: `/${t.from.role}/queries?t=${t.id}` })
       } else {
+        notify(d, ['admin:admin'], { kind: 'ticket', important: false, title: `${t.anonymous ? 'Anonymous' : t.from.name} replied · ${t.ref}`, body: body || 'Marked resolved by the requester.', link: `/admin/queries?t=${t.id}` })
         t.unreadByAdmin = true
         if (resolve) t.status = 'resolved'
         else if (t.status === 'resolved' || t.status === 'closed') t.status = 'open' // a reply reopens it
@@ -208,7 +210,10 @@ function TicketThread({ ticket, onBack }: { ticket: Ticket; onBack: () => void }
       if (t) {
         t[k] = v
         t.updatedAt = new Date().toISOString()
-        if (k === 'status') t.unreadByRequester = true
+        if (k === 'status') {
+          t.unreadByRequester = true
+          notify(d, [`${t.from.role}:${t.from.userId}`], { kind: 'ticket', important: false, title: `${t.ref} is now ${STATUS[v as TicketStatus].label.toLowerCase()}`, body: t.subject, link: `/${t.from.role}/queries?t=${t.id}` })
+        }
       }
     })
     toast(k === 'status' ? `Status: ${STATUS[v as TicketStatus].label}` : `Priority: ${cap(v as string)}`)
@@ -294,16 +299,14 @@ function NewTicket({ kind: initialKind, onClose, onCreated }: { kind: Ticket['ki
         from: { role: session.role as 'student' | 'staff', userId: session.userId, name: session.name }, createdAt: now, updatedAt: now,
         messages: [{ id: uid('m'), by: 'requester', name: session.name, text: body.trim(), at: now }], unreadByAdmin: true, unreadByRequester: false,
       })
+      notify(d, ['admin:admin'], { kind: 'ticket', important: priority === 'urgent' || priority === 'high', title: `New ${kind}${priority === 'urgent' ? ' · URGENT' : ''}: ${subject.trim()}`, body: `${kind === 'complaint' && anonymous ? 'Anonymous' : session.name} · ${category}`, link: `/admin/queries?t=${id}` })
     })
     toast(`${kind === 'complaint' ? 'Complaint' : 'Query'} Q-${n} submitted`)
     onCreated(id)
   }
   return (
     <Modal open title={kind === 'complaint' ? 'File a complaint' : 'Raise a query'} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button icon={<Send size={16} />} onClick={submit}>Submit</Button></>}>
-      <div className="segmented" role="radiogroup" aria-label="Type">
-        <button role="radio" aria-checked={kind === 'query'} className={kind === 'query' ? 'active' : ''} onClick={() => setKind('query')}><MessageSquareText size={16} /> Query</button>
-        <button role="radio" aria-checked={kind === 'complaint'} className={kind === 'complaint' ? 'active' : ''} onClick={() => setKind('complaint')}><AlertTriangle size={16} /> Complaint</button>
-      </div>
+      <Segmented label="Type" value={kind} onChange={setKind} options={[{ id: 'query', label: 'Query', icon: <MessageSquareText size={16} /> }, { id: 'complaint', label: 'Complaint', icon: <AlertTriangle size={16} /> }]} />
       <div className="form-grid">
         <Field label="Category">{(id) => <select id={id} className="input" value={category} onChange={(e) => setCategory(e.target.value as Ticket['category'])}>{CATEGORIES.map((c) => <option key={c} value={c}>{cap(c)}</option>)}</select>}</Field>
         <Field label="Priority">{(id) => <select id={id} className="input" value={priority} onChange={(e) => setPriority(e.target.value as Ticket['priority'])}>{(['low', 'normal', 'high', 'urgent'] as const).map((p) => <option key={p} value={p}>{cap(p)}</option>)}</select>}</Field>

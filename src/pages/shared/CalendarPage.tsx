@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, CalendarX, Flag } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
-import { Button, Card, Empty } from '../../components/ui'
+import { Button, Card, Empty, Segmented } from '../../components/ui'
 import { gsap, prefersReducedMotion } from '../../components/motion'
 import { useIsMobile } from '../../lib/useMedia'
 import {
@@ -132,13 +132,7 @@ export default function CalendarPage() {
           </div>
         </div>
         <div className="cal-controls">
-          <div className="segmented" role="tablist" aria-label="View">
-            {(['week', 'month', 'list'] as View[]).map((v) => (
-              <button key={v} role="tab" aria-selected={view === v} className={view === v ? 'active' : ''} onClick={() => setView(v)}>
-                {v[0].toUpperCase() + v.slice(1)}
-              </button>
-            ))}
-          </div>
+          <Segmented kind="tab" label="View" value={view} onChange={setView} options={(['week', 'month', 'list'] as View[]).map((v) => ({ id: v, label: v[0].toUpperCase() + v.slice(1) }))} />
           <button className="round-btn" aria-label="Previous" onClick={() => step(-1)}><ChevronLeft size={18} /></button>
           <Button variant="secondary" onClick={today}>Today</Button>
           <button className="round-btn" aria-label="Next" onClick={() => step(1)}><ChevronRight size={18} /></button>

@@ -41,9 +41,10 @@ function Home() {
 }
 
 const CHILDREN: Record<Role, string[]> = {
-  admin: ['calendar', 'events', 'students', 'staff', 'subjects', 'fees', 'attendance', 'timetable', 'queries', 'email', 'settings'],
-  staff: ['calendar', 'attendance', 'timetable', 'students', 'events', 'queries'],
-  student: ['calendar', 'fees', 'attendance', 'timetable', 'events', 'queries'],
+  admin: ['calendar', 'events', 'students', 'staff', 'subjects', 'fees', 'attendance', 'timetable', 'queries', 'email', 'settings', 'chat', 'approvals', 'finance', 'profile'],
+  staff: ['calendar', 'attendance', 'timetable', 'students', 'events', 'queries', 'chat', 'requests', 'approvals', 'department', 'profile'],
+  student: ['calendar', 'fees', 'attendance', 'timetable', 'events', 'queries', 'chat', 'profile'],
+  accountant: ['fees', 'invoices', 'bills', 'bank', 'taxes', 'reports', 'chat', 'calendar', 'profile'],
 }
 
 function roleRoutes(role: Role) {
@@ -68,7 +69,7 @@ export default function App() {
             <Route path="/super/login" element={<SuperLogin />} />
             <Route path="/super" element={<SuperConsole />} />
             <Route path="/login" element={<TenantGate><Login /></TenantGate>} />
-            {(['admin', 'staff', 'student'] as Role[]).map(roleRoutes)}
+            {(['admin', 'staff', 'student', 'accountant'] as Role[]).map(roleRoutes)}
             <Route path="*" element={<Home />} />
           </Routes>
         </Suspense>
