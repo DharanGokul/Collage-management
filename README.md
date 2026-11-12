@@ -62,6 +62,7 @@ The UI uses the **Caesar** design system: Black leads, Burgundy speaks once, Whi
 - Display type is Archivo Black in capitals; body text is Figtree.
 - On request, the app softens Caesar's square, flat style: cards have 22px corners, inner tiles 16px, and buttons and inputs 12px, with soft shadows in both themes. The red (Burgundy) is the primary colour for the navigation highlight, active tabs, chips and toggles, the main buttons, today markers and badges.
 - Content spans the full width of the screen; there is no fixed-width container.
+- **Day theme follows the reference screenshots:** a soft mint-to-peach gradient background, semi-transparent white cards with 28px corners and very soft shadows, white inner tiles, sentence-case headings and a light sign-in page. Only the fixed bars, pop-ups and sheets blur what's behind them, which keeps clicks and typing fast. **Night** keeps the Caesar Noir look.
 - The accent defaults to Burgundy. Each college can replace it with its own brand colour, and `src/lib/theme.ts` derives the pressed state, the text colour on the accent, and accent-text tints with enough contrast in both themes.
 - Two sets of colours were added beyond the brand palette: status colours (ok, warn, danger, info) and agenda kind colours. Kinds always show a short code as well, so colour is never the only signal.
 

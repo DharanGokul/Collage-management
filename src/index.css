@@ -930,6 +930,132 @@ button.tt-cell:hover { border: 1px solid var(--control-border); }
 .theme-thumb.auto span:nth-child(1) { background: var(--accent); }
 @media (max-width: 640px) { .theme-cards { grid-template-columns: 1fr; } }
 
+/* =====================================================================
+   DAY THEME — reference-screenshot look: soft mint→peach gradient,
+   frosted white glass cards, generous radii, whisper-soft shadows,
+   sentence-case headings. Red stays the primary colour.
+   (Night keeps the Caesar Noir look.)
+   ===================================================================== */
+:root[data-theme='light'] {
+  --surface: rgb(255 255 255 / 0.78);          /* inner tiles */
+  --surface-raised: rgb(255 255 255 / 0.64);   /* glass cards */
+  --surface-solid: #ffffff;                    /* modals, sheets, popovers */
+  --surface-hover: rgb(255 255 255 / 0.95);
+  --surface-sunken: rgb(20 50 40 / 0.035);
+  --ink: #15191b;
+  --ink-muted: #59625f;
+  --hairline: rgb(20 50 40 / 0.08);
+  --control-border: #8d9693;
+  --glass-border: rgb(255 255 255 / 0.9);
+  --radius: 18px;
+  --radius-lg: 28px;
+  --shadow-sm: 0 1px 2px rgb(30 60 50 / 0.05);
+  --shadow: 0 1px 2px rgb(30 60 50 / 0.03), 0 14px 40px rgb(30 60 50 / 0.07);
+  --shadow-lg: 0 2px 8px rgb(30 60 50 / 0.06), 0 30px 80px rgb(30 60 50 / 0.16);
+  --scrim: rgb(30 45 40 / 0.28);
+  --page-gradient:
+    radial-gradient(1100px 700px at 0% 0%, #d4ebe3 0%, rgb(212 235 227 / 0) 62%),
+    radial-gradient(900px 760px at 100% 8%, #f8e8db 0%, rgb(248 232 219 / 0) 58%),
+    radial-gradient(1000px 700px at 55% 100%, #f2ede3 0%, rgb(242 237 227 / 0) 60%),
+    #eef2ef;
+}
+:root[data-theme='light'] body { background: var(--page-gradient); background-attachment: fixed; }
+
+/* Glass surfaces */
+:root[data-theme='light'] .card,
+:root[data-theme='light'] .event-card,
+:root[data-theme='light'] .liquid,
+:root[data-theme='light'] .theme-switch,
+:root[data-theme='light'] .rail-group,
+:root[data-theme='light'] .user-chip,
+:root[data-theme='light'] .round-btn,
+:root[data-theme='light'] .tenant-chip,
+:root[data-theme='light'] .tabbar {
+  background: var(--surface-raised);
+  border-color: var(--glass-border);
+}
+/* Blur only on fixed chrome (cheap: few, small layers). Cards stay unblurred —
+   over a smooth gradient it looks the same and keeps interactions fast. */
+:root[data-theme='light'] .tabbar,
+:root[data-theme='light'] .rail-group { -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); background: rgb(255 255 255 / 0.72); }
+:root[data-theme='light'] .card { border: 1px solid var(--glass-border); }
+:root[data-theme='light'] .card-head { border-bottom-color: transparent; padding-bottom: 6px; }
+:root[data-theme='light'] .modal,
+:root[data-theme='light'] .popover,
+:root[data-theme='light'] .sheet { background: rgb(255 255 255 / 0.94); border-color: var(--glass-border); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+:root[data-theme='light'] .modal-head, :root[data-theme='light'] .modal-foot { border-color: var(--hairline); }
+:root[data-theme='light'] .topbar,
+:root[data-theme='light'] .m-header,
+:root[data-theme='light'] .super-top {
+  background: rgb(238 242 239 / 0.6); border-bottom-color: transparent; box-shadow: none;
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+}
+:root[data-theme='light'] .input { background: rgb(255 255 255 / 0.9); }
+:root[data-theme='light'] .round-btn:hover, :root[data-theme='light'] .icon-btn:hover { background: #fff; }
+
+/* Inner tiles: white with a faint edge, like the reference */
+:root[data-theme='light'] .need,
+:root[data-theme='light'] .coming-item,
+:root[data-theme='light'] .week-day:not(.today),
+:root[data-theme='light'] .tri > div,
+:root[data-theme='light'] .slot,
+:root[data-theme='light'] .provider,
+:root[data-theme='light'] .strip-day:not(.active),
+:root[data-theme='light'] .ev-card,
+:root[data-theme='light'] .sheet-tile,
+:root[data-theme='light'] .theme-card { background: rgb(255 255 255 / 0.8); border-color: rgb(20 50 40 / 0.07); }
+:root[data-theme='light'] .table th { border-bottom-color: var(--hairline); }
+:root[data-theme='light'] .table tbody tr:hover td { background: rgb(255 255 255 / 0.6); }
+:root[data-theme='light'] .wk-col.past { background-color: rgb(20 50 40 / 0.03); }
+:root[data-theme='light'] .wk-col.today { background-color: rgb(255 255 255 / 0.55); }
+:root[data-theme='light'] .month-cell.out { background: rgb(20 50 40 / 0.03); }
+
+/* Typography: sentence case, softer weights (reference style) */
+:root[data-theme='light'] h1,
+:root[data-theme='light'] h2,
+:root[data-theme='light'] .greet-title,
+:root[data-theme='light'] .login-card h2,
+:root[data-theme='light'] .login-hero h1,
+:root[data-theme='light'] .brand-text strong {
+  font-family: var(--font-sans); text-transform: none; letter-spacing: -0.03em;
+}
+:root[data-theme='light'] h1 { font-weight: 700; }
+:root[data-theme='light'] .greet-title { font-weight: 600; line-height: 1.02; font-size: clamp(30px, min(9vw, 3vw + 12px), 48px); }
+:root[data-theme='light'] .brand-text strong { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+:root[data-theme='light'] .login-card h2 { font-weight: 700; }
+:root[data-theme='light'] .stat-value,
+:root[data-theme='light'] .kpi-value,
+:root[data-theme='light'] .upnext-count,
+:root[data-theme='light'] .cal-kpis strong,
+:root[data-theme='light'] .tri strong,
+:root[data-theme='light'] .class-card strong,
+:root[data-theme='light'] .week-day-head strong,
+:root[data-theme='light'] .fee-amt strong,
+:root[data-theme='light'] .stat-plain strong { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.03em; }
+:root[data-theme='light'] .spec { letter-spacing: 0.04em; }
+
+/* Login: gradient hero with the red band, instead of black slabs */
+:root[data-theme='light'] .login { background: var(--page-gradient); background-attachment: fixed; }
+:root[data-theme='light'] .login-hero { grid-template-columns: 1fr 160px 48px; }
+:root[data-theme='light'] .slab-black, :root[data-theme='light'] .slab-white { background: transparent; border: 0; }
+:root[data-theme='light'] .slab-accent { border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 48px; box-shadow: var(--shadow-lg); }
+:root[data-theme='light'] .login-hero-inner { color: var(--ink); width: calc(100% - 208px); }
+:root[data-theme='light'] .login-brand .brand-mark { background: var(--accent); color: var(--on-accent); }
+:root[data-theme='light'] .login-brand p, :root[data-theme='light'] .login-contact { color: var(--ink-muted); opacity: 1; }
+:root[data-theme='light'] .login-panel { background: transparent; }
+:root[data-theme='light'] .login-card { background: rgb(255 255 255 / 0.66); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow); }
+:root[data-theme='light'] .super-login, :root[data-theme='light'] .not-found { background: var(--page-gradient); }
+
+/* Day preview tile in Settings */
+.theme-thumb.day { background: radial-gradient(120px 80px at 0 0, #d4ebe3, transparent 70%), radial-gradient(120px 90px at 100% 0, #f8e8db, transparent 65%), #eef2ef; }
+.theme-thumb.day span { background: rgb(255 255 255 / 0.8); border-radius: 6px; }
+.theme-thumb.auto { background: linear-gradient(135deg, #e3efe9 50%, #000 50%); }
+
+@media (max-width: 960px) {
+  :root[data-theme='light'] .login { display: block; }
+  :root[data-theme='light'] .login-panel { min-height: 100vh; }
+}
+
 /* ---------- responsive ---------- */
 @media (max-width: 1600px) {
   .tenant-chip { display: none; }

@@ -70,7 +70,7 @@ function apply(t: ResolvedTheme) {
   const root = document.documentElement
   root.dataset.theme = t
   root.style.colorScheme = t
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'dark' ? '#000000' : '#ffffff')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'dark' ? '#000000' : '#e6efea')
 }
 if (typeof document !== 'undefined') apply(state.theme)
 
