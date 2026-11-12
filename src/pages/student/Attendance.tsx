@@ -25,6 +25,7 @@ export default function StudentAttendance() {
           </div>
         </Card>
         <Card title="By subject" pad={false}>
+          <div className="table-wrap">
           <table className="table">
             <thead><tr><th>Subject</th><th>Attended</th><th style={{ width: '40%' }}>%</th></tr></thead>
             <tbody>
@@ -34,6 +35,7 @@ export default function StudentAttendance() {
               })}
             </tbody>
           </table>
+          </div>
         </Card>
       </div>
       <Card title="Recent periods" pad={false}>

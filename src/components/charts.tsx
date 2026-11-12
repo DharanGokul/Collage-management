@@ -1,6 +1,6 @@
 /** Lightweight dependency-free charts that follow the brand colour. */
 
-export function BarChart({ data, format = (v) => String(v), height = 180, max }: { data: { label: string; value: number; sub?: string }[]; format?: (v: number) => string; height?: number; max?: number }) {
+export function BarChart({ data, format = (v) => String(v), height = 180, max }: { data: { label: string; value: number; short?: string }[]; format?: (v: number) => string; height?: number; max?: number }) {
   const top = max ?? Math.max(1, ...data.map((d) => d.value))
   return (
     <div className="barchart" style={{ height }}>
@@ -10,7 +10,10 @@ export function BarChart({ data, format = (v) => String(v), height = 180, max }:
           <div className="bar-track">
             <div className="bar" style={{ height: `${(d.value / top) * 100}%` }} />
           </div>
-          <span className="bar-label">{d.label}</span>
+          <span className="bar-label">
+            <span className="bar-label-long">{d.label}</span>
+            {d.short && <span className="bar-label-short">{d.short}</span>}
+          </span>
         </div>
       ))}
     </div>

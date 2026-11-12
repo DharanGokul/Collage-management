@@ -118,7 +118,7 @@ export function SuperConsole() {
         </div>
         <span className="spacer" />
         <ThemeToggle />
-        <Button variant="ghost" icon={<LogOut size={16} />} onClick={() => { sessionStorage.removeItem(SUPER_KEY); nav('/super/login') }}>Sign out</Button>
+        <Button variant="ghost" className="collapse-sm" aria-label="Sign out" icon={<LogOut size={16} />} onClick={() => { sessionStorage.removeItem(SUPER_KEY); nav('/super/login') }}>Sign out</Button>
       </header>
       <main className="content">
         <div className="page-header">

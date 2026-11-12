@@ -73,11 +73,25 @@ export interface FeeStatus {
   status: 'paid' | 'due' | 'overdue'
 }
 
+// Index successful payments by student+fee. Cached per payments array (arrays are replaced on every update),
+// so looking up fee status is O(1) instead of scanning every payment for every student.
+const paymentIndexCache = new WeakMap<Payment[], Map<string, Payment>>()
+function paymentIndex(payments: Payment[]) {
+  let idx = paymentIndexCache.get(payments)
+  if (!idx) {
+    idx = new Map()
+    for (const p of payments) if (p.status === 'success' && !idx.has(`${p.studentId}|${p.feeId}`)) idx.set(`${p.studentId}|${p.feeId}`, p)
+    paymentIndexCache.set(payments, idx)
+  }
+  return idx
+}
+
 export function studentFeeStatus(db: Database, s: Student): FeeStatus[] {
+  const idx = paymentIndex(db.payments)
   return db.fees
     .filter((f) => feeAppliesTo(f, s))
     .map((fee) => {
-      const payment = db.payments.find((p) => p.studentId === s.id && p.feeId === fee.id && p.status === 'success')
+      const payment = idx.get(`${s.id}|${fee.id}`)
       const lateFee = payment ? payment.lateFee : lateFeeFor(fee)
       const overdue = !payment && new Date(fee.dueDate + 'T23:59:59') < new Date()
       return {

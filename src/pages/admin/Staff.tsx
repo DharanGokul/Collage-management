@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus, Search, Pencil, Trash2, Download, Users } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
-import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader } from '../../components/ui'
+import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, usePaged } from '../../components/ui'
 import { downloadCSV, isValidEmail, uid } from '../../lib/utils'
 import type { Staff } from '../../types'
 
@@ -15,6 +15,7 @@ export default function StaffPage() {
     const t = q.trim().toLowerCase()
     return db.staff.filter((s) => (dept === 'all' || s.department === dept) && (!t || s.name.toLowerCase().includes(t) || s.empId.toLowerCase().includes(t) || s.email.toLowerCase().includes(t)))
   }, [db.staff, q, dept])
+  const paged = usePaged(rows)
 
   const remove = (s: Staff) => {
     const n = db.subjects.filter((x) => x.staffId === s.id).length
@@ -55,10 +56,10 @@ export default function StaffPage() {
           <div className="table-wrap">
             <table className="table">
               <thead>
-                <tr><th>Name</th><th>Emp ID</th><th>Department</th><th>Designation</th><th>Subjects</th><th>Status</th><th className="right">Actions</th></tr>
+                <tr><th>Name</th><th className="hide-sm">Emp ID</th><th className="hide-sm">Department</th><th className="hide-sm">Designation</th><th className="hide-sm">Subjects</th><th>Status</th><th className="right">Actions</th></tr>
               </thead>
               <tbody>
-                {rows.map((s) => {
+                {paged.items.map((s) => {
                   const subs = db.subjects.filter((x) => x.staffId === s.id)
                   return (
                     <tr key={s.id}>
@@ -68,10 +69,10 @@ export default function StaffPage() {
                           <div><strong>{s.name}</strong><div className="muted tiny">{s.email}</div></div>
                         </div>
                       </td>
-                      <td className="mono">{s.empId}</td>
-                      <td>{s.department}</td>
-                      <td>{s.designation}</td>
-                      <td>{subs.length ? <span title={subs.map((x) => x.name).join(', ')}>{subs.length} assigned</span> : <span className="muted">—</span>}</td>
+                      <td className="mono hide-sm">{s.empId}</td>
+                      <td className="hide-sm">{s.department}</td>
+                      <td className="hide-sm">{s.designation}</td>
+                      <td className="hide-sm">{subs.length ? <span title={subs.map((x) => x.name).join(', ')}>{subs.length} assigned</span> : <span className="muted">—</span>}</td>
                       <td><Badge tone={s.status === 'active' ? 'green' : 'gray'}>{s.status}</Badge></td>
                       <td className="right nowrap">
                         <button className="icon-btn" aria-label={`Edit ${s.name}`} onClick={() => setEditing(s)}><Pencil size={16} /></button>
@@ -84,6 +85,7 @@ export default function StaffPage() {
             </table>
           </div>
         )}
+        <Pager {...paged} />
       </Card>
       {editing && (
         <StaffForm

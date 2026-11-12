@@ -40,7 +40,7 @@ export default function AdminDashboard() {
           t++
           if (m !== 'A') p++
         }
-      return { label: formatDate(d, { day: 'numeric', month: 'short' }), value: t ? Math.round((p / t) * 100) : 0 }
+      return { label: formatDate(d, { day: 'numeric', month: 'short' }), short: String(+d.slice(8)), value: t ? Math.round((p / t) * 100) : 0 }
     })
     const low = db.students.filter((s) => {
       const sum = summarize(db.attendance, s.id)

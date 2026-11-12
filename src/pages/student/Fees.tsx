@@ -60,15 +60,15 @@ export default function StudentFees() {
         {history.length === 0 ? <Empty title="No payments yet" /> : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Date</th><th>Fee</th><th>Mode</th><th>Amount</th><th>Status</th><th /></tr></thead>
+              <thead><tr><th>Date</th><th>Fee</th><th className="hide-sm">Mode</th><th>Amount</th><th className="hide-sm">Status</th><th /></tr></thead>
               <tbody>
                 {history.map((p) => (
                   <tr key={p.id}>
                     <td>{formatDate(p.paidAt)}</td>
                     <td>{db.fees.find((f) => f.id === p.feeId)?.name}</td>
-                    <td>{PAYMENT_METHOD_LABEL[p.method]}</td>
+                    <td className="hide-sm">{PAYMENT_METHOD_LABEL[p.method]}</td>
                     <td><strong>{formatMoney(p.amount + p.lateFee, cur)}</strong></td>
-                    <td><Badge tone={p.status === 'success' ? 'green' : 'gray'}>{p.status}</Badge></td>
+                    <td className="hide-sm"><Badge tone={p.status === 'success' ? 'green' : 'gray'}>{p.status}</Badge></td>
                     <td className="right"><button className="icon-btn" aria-label="Receipt" onClick={() => setReceipt(p)}><Receipt size={16} /></button></td>
                   </tr>
                 ))}

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Send, Download, Receipt, Undo2, Wallet, Search } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
-import { Badge, Button, Card, Empty, Field, Modal, PageHeader, Stat, Tabs } from '../../components/ui'
+import { Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, Stat, Tabs, usePaged } from '../../components/ui'
 import { ReceiptModal, PAYMENT_METHOD_LABEL } from '../../components/Receipt'
 import { downloadCSV, feeAppliesTo, formatDate, formatMoney, lateFeeFor, newReceiptNo, studentFeeStatus, uid } from '../../lib/utils'
 import type { FeeItem, Payment, Student } from '../../types'
@@ -49,14 +49,16 @@ function Dues() {
   const [recording, setRecording] = useState<{ student: Student; fee: FeeItem } | null>(null)
   const fee = db.fees.find((f) => f.id === feeId)
 
+  const dq = useDeferredValue(q)
   const rows = useMemo(() => {
     if (!fee) return []
-    const t = q.trim().toLowerCase()
+    const t = dq.trim().toLowerCase()
     return db.students
       .filter((s) => s.status === 'active' && feeAppliesTo(fee, s) && (!t || s.name.toLowerCase().includes(t) || s.rollNo.toLowerCase().includes(t)))
       .map((s) => ({ s, st: studentFeeStatus(db, s).find((x) => x.fee.id === fee.id)! }))
       .filter(({ st }) => filter === 'all' || (filter === 'unpaid' ? st.status !== 'paid' : st.status === filter))
-  }, [db, fee, filter, q])
+  }, [db, fee, filter, dq])
+  const paged = usePaged(rows)
 
   const unpaidRows = rows.filter((r) => r.st.status !== 'paid')
   const allSelected = unpaidRows.length > 0 && unpaidRows.every((r) => selected.has(r.s.id))
@@ -102,11 +104,11 @@ function Dues() {
           <thead>
             <tr>
               <th className="check"><input type="checkbox" aria-label="Select all unpaid" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(unpaidRows.map((r) => r.s.id)))} /></th>
-              <th>Student</th><th>Class</th><th>Amount</th><th>Late fee</th><th>Status</th><th className="right">Action</th>
+              <th>Student</th><th className="hide-sm">Class</th><th className="hide-sm">Amount</th><th className="hide-sm">Late fee</th><th>Status</th><th className="right">Action</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ s, st }) => (
+            {paged.items.map(({ s, st }) => (
               <tr key={s.id}>
                 <td className="check">
                   {st.status !== 'paid' && (
@@ -114,9 +116,9 @@ function Dues() {
                   )}
                 </td>
                 <td><strong>{s.name}</strong><div className="muted tiny mono">{s.rollNo}</div></td>
-                <td>{s.department} · Y{s.year}</td>
-                <td>{formatMoney(st.fee.amount, cur)}</td>
-                <td>{st.lateFee ? formatMoney(st.lateFee, cur) : '—'}</td>
+                <td className="hide-sm">{s.department} · Y{s.year}</td>
+                <td className="hide-sm">{formatMoney(st.fee.amount, cur)}</td>
+                <td className="hide-sm">{st.lateFee ? formatMoney(st.lateFee, cur) : '—'}</td>
                 <td>{st.status === 'paid' ? <Badge tone="green">Paid {formatDate(st.payment!.paidAt, { day: 'numeric', month: 'short' })}</Badge> : st.status === 'overdue' ? <Badge tone="red">Overdue</Badge> : <Badge tone="amber">Due {formatDate(fee.dueDate, { day: 'numeric', month: 'short' })}</Badge>}</td>
                 <td className="right">{st.status !== 'paid' && <Button size="sm" variant="secondary" onClick={() => setRecording({ student: s, fee })}>Record payment</Button>}</td>
               </tr>
@@ -125,6 +127,7 @@ function Dues() {
           </tbody>
         </table>
       </div>
+      <Pager {...paged} />
       {recording && <RecordPayment {...recording} onClose={() => setRecording(null)} />}
     </Card>
   )
@@ -274,6 +277,7 @@ function Ledger() {
         return p.receiptNo.toLowerCase().includes(t) || p.txnRef.toLowerCase().includes(t) || !!s?.name.toLowerCase().includes(t) || !!s?.rollNo.toLowerCase().includes(t)
       })
   }, [db.payments, db.students, q])
+  const paged = usePaged(rows)
 
   return (
     <Card pad={false}>
@@ -298,17 +302,17 @@ function Ledger() {
       </div>
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>Receipt</th><th>Date</th><th>Student</th><th>Fee</th><th>Mode</th><th>Amount</th><th>Status</th><th className="right">Actions</th></tr></thead>
+          <thead><tr><th className="hide-sm">Receipt</th><th>Date</th><th>Student</th><th className="hide-sm">Fee</th><th className="hide-sm">Mode</th><th>Amount</th><th>Status</th><th className="right">Actions</th></tr></thead>
           <tbody>
-            {rows.slice(0, 200).map((p) => {
+            {paged.items.map((p) => {
               const s = db.students.find((x) => x.id === p.studentId)
               return (
                 <tr key={p.id}>
-                  <td className="mono tiny">{p.receiptNo}</td>
+                  <td className="mono tiny hide-sm">{p.receiptNo}</td>
                   <td className="nowrap">{formatDate(p.paidAt)}</td>
                   <td>{s?.name ?? <span className="muted">Deleted</span>}</td>
-                  <td>{db.fees.find((f) => f.id === p.feeId)?.name ?? '—'}</td>
-                  <td>{PAYMENT_METHOD_LABEL[p.method]}</td>
+                  <td className="hide-sm">{db.fees.find((f) => f.id === p.feeId)?.name ?? '—'}</td>
+                  <td className="hide-sm">{PAYMENT_METHOD_LABEL[p.method]}</td>
                   <td><strong>{formatMoney(p.amount + p.lateFee, cur)}</strong></td>
                   <td><Badge tone={p.status === 'success' ? 'green' : p.status === 'refunded' ? 'gray' : 'red'}>{p.status}</Badge></td>
                   <td className="right nowrap">
@@ -326,6 +330,7 @@ function Ledger() {
           </tbody>
         </table>
       </div>
+      <Pager {...paged} />
       <ReceiptModal payment={receipt} onClose={() => setReceipt(null)} />
     </Card>
   )

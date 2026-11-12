@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { Plus, Search, Pencil, Trash2, Download, Mail, GraduationCap } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
-import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader } from '../../components/ui'
+import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, usePaged } from '../../components/ui'
 import { downloadCSV, isValidEmail, studentFeeStatus, summarize, uid } from '../../lib/utils'
 import type { Student } from '../../types'
 
@@ -27,15 +27,25 @@ export default function Students() {
   const [year, setYear] = useState('all')
   const [editing, setEditing] = useState<Student | null>(null)
 
+  // Per-student attendance & fee stats, computed once per data change instead of on every keystroke.
+  const stats = useMemo(() => {
+    const m = new Map<string, { att: ReturnType<typeof summarize>; due: ReturnType<typeof studentFeeStatus> }>()
+    for (const s of db.students) m.set(s.id, { att: summarize(db.attendance, s.id), due: studentFeeStatus(db, s).filter((f) => f.status !== 'paid') })
+    return m
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db.students, db.attendance, db.fees, db.payments])
+
+  const dq = useDeferredValue(q)
   const rows = useMemo(() => {
-    const t = q.trim().toLowerCase()
+    const t = dq.trim().toLowerCase()
     return db.students.filter(
       (s) =>
         (dept === 'all' || s.department === dept) &&
         (year === 'all' || s.year === +year) &&
         (!t || s.name.toLowerCase().includes(t) || s.rollNo.toLowerCase().includes(t) || s.email.toLowerCase().includes(t)),
     )
-  }, [db.students, q, dept, year])
+  }, [db.students, dq, dept, year])
+  const paged = usePaged(rows)
 
   const remove = (s: Student) => {
     if (!confirm(`Delete ${s.name}? Their attendance and payment history will be removed as well.`)) return
@@ -95,19 +105,17 @@ export default function Students() {
               <thead>
                 <tr>
                   <th>Student</th>
-                  <th>Roll no</th>
-                  <th>Class</th>
+                  <th className="hide-sm">Roll no</th>
+                  <th className="hide-sm">Class</th>
                   <th>Attendance</th>
                   <th>Fees</th>
-                  <th>Status</th>
+                  <th className="hide-sm">Status</th>
                   <th className="right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((s) => {
-                  const att = summarize(db.attendance, s.id)
-                  const fees = studentFeeStatus(db, s)
-                  const due = fees.filter((f) => f.status !== 'paid')
+                {paged.items.map((s) => {
+                  const { att, due } = stats.get(s.id)!
                   return (
                     <tr key={s.id}>
                       <td>
@@ -119,15 +127,15 @@ export default function Students() {
                           </div>
                         </div>
                       </td>
-                      <td className="mono">{s.rollNo}</td>
-                      <td>{s.department} · Y{s.year} · {s.section}</td>
+                      <td className="mono hide-sm">{s.rollNo}</td>
+                      <td className="hide-sm">{s.department} · Y{s.year} · {s.section}</td>
                       <td>
                         {att.total ? <Badge tone={att.pct >= 85 ? 'green' : att.pct >= 75 ? 'amber' : 'red'}>{att.pct}%</Badge> : <span className="muted">—</span>}
                       </td>
                       <td>
                         {due.length === 0 ? <Badge tone="green">Paid</Badge> : due.some((f) => f.status === 'overdue') ? <Badge tone="red">{due.length} overdue</Badge> : <Badge tone="amber">{due.length} due</Badge>}
                       </td>
-                      <td><Badge tone={s.status === 'active' ? 'green' : 'gray'}>{s.status}</Badge></td>
+                      <td className="hide-sm"><Badge tone={s.status === 'active' ? 'green' : 'gray'}>{s.status}</Badge></td>
                       <td className="right nowrap">
                         <button className="icon-btn" title="Send welcome email" aria-label={`Email ${s.name}`} onClick={() => welcome(s)}><Mail size={16} /></button>
                         <button className="icon-btn" title="Edit" aria-label={`Edit ${s.name}`} onClick={() => setEditing(s)}><Pencil size={16} /></button>
@@ -140,6 +148,7 @@ export default function Students() {
             </table>
           </div>
         )}
+        <Pager {...paged} />
       </Card>
       {editing && (
         <StudentForm

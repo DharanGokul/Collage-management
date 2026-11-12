@@ -1,5 +1,5 @@
-import { useEffect, useId, type ButtonHTMLAttributes, type ReactNode } from 'react'
-import { X, CheckCircle2, AlertCircle, Info } from 'lucide-react'
+import { useEffect, useId, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { X, CheckCircle2, AlertCircle, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '../store/AppStore'
 import { initials } from '../lib/utils'
 
@@ -179,5 +179,34 @@ export function Logo({ size = 36 }: { size?: number }) {
     <span className="brand-mark" style={{ width: size, height: size, fontSize: size * 0.45 }} aria-hidden>
       {(b.shortName || b.collegeName).trim()[0]?.toUpperCase() ?? 'C'}
     </span>
+  )
+}
+
+/** Client-side pagination; resets to page 1 whenever the filtered list changes. */
+export function usePaged<T>(rows: T[], size = 25) {
+  const [page, setPage] = useState(0)
+  const pages = Math.max(1, Math.ceil(rows.length / size))
+  useEffect(() => setPage(0), [rows])
+  const p = Math.min(page, pages - 1)
+  return { items: rows.slice(p * size, p * size + size), page: p, pages, setPage, total: rows.length, size }
+}
+
+export function Pager({ page, pages, setPage, total, size }: { page: number; pages: number; setPage: (n: number) => void; total: number; size: number }) {
+  if (total <= size) return null
+  return (
+    <div className="pager">
+      <span className="muted tiny">
+        {page * size + 1}–{Math.min(total, (page + 1) * size)} of {total}
+      </span>
+      <button className="icon-btn" aria-label="Previous page" disabled={page === 0} onClick={() => setPage(page - 1)}>
+        <ChevronLeft size={18} />
+      </button>
+      <span className="tiny">
+        {page + 1} / {pages}
+      </span>
+      <button className="icon-btn" aria-label="Next page" disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>
+        <ChevronRight size={18} />
+      </button>
+    </div>
   )
 }
