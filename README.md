@@ -56,7 +56,8 @@ Dashboard, fee payment (demo checkout by UPI, card or net banking, with a printa
 
 ## Design system — Caesar
 The UI uses the **Caesar** design system: Black leads, Burgundy speaks once, White gives room.
-- The tokens in `src/index.css` mirror the system's `tokens.json`. **Noir** (dark) is the default theme and **Marble** (light) is the alternative.
+- The tokens in `src/index.css` mirror the system's `tokens.json`, with two themes: **Night** (Noir, dark) and **Day** (Marble, light).
+- **Day / Night / Auto switch:** it sits in the top bar, in the mobile "More" sheet, and on the login and platform screens. **Auto** (the default) uses Day from 6 AM to 6 PM and Night otherwise. It flips live when the clock passes either time, and checks again when you return to the tab. A new theme spreads out in a circle from the switch where the browser supports View Transitions, and fades in elsewhere. The choice is saved per browser (`src/lib/themeMode.ts`).
 - Display type is Archivo Black in capitals; body text is Figtree.
 - Cards and colour slabs are square; buttons and inputs use an 8px radius; chips are pills. There are no shadows or gradients.
 - The accent defaults to Burgundy. Each college can replace it with its own brand colour, and `src/lib/theme.ts` derives the pressed state, the text colour on the accent, and accent-text tints with enough contrast in both themes.

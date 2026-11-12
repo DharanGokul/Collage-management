@@ -231,6 +231,25 @@ img { max-width: 100%; }
 .round-btn:hover { background: var(--surface-hover); }
 .count-dot { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 700; display: grid; place-items: center; }
 
+/* Day / Night / Auto switch (liquid indicator, like the nav) */
+.theme-switch { position: relative; display: inline-flex; gap: 2px; padding: 4px; border-radius: var(--radius-pill); background: var(--surface-raised); border: 1px solid var(--hairline); isolation: isolate; flex-shrink: 0; }
+.theme-blob { position: absolute; top: 4px; left: 0; height: calc(100% - 8px); border-radius: var(--radius-pill); background: var(--ink); z-index: -1; pointer-events: none; will-change: transform, width; }
+.theme-opt { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; min-width: 34px; padding: 0 10px; border: 0; border-radius: var(--radius-pill); background: none; color: var(--ink-muted); font-weight: 600; font-size: 13px; cursor: pointer; transition: color 0.25s var(--ease-out); }
+.theme-switch.compact .theme-opt { padding: 0; width: 34px; }
+.theme-opt:hover { color: var(--ink); }
+.theme-opt.active { color: var(--surface); }
+.theme-switch:not(.compact) { display: flex; width: 100%; }
+.theme-switch:not(.compact) .theme-opt { flex: 1; height: 40px; }
+.sheet-theme { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+
+/* Theme change animation: circular reveal (View Transitions) or a short colour fade */
+html.vt-reveal::view-transition-old(root),
+html.vt-reveal::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+html.vt-reveal::view-transition-new(root) { z-index: 9999; }
+html.theme-fade, html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after {
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, fill 0.35s ease !important;
+}
+
 /* Popover (notifications, create menu) */
 .pop-wrap { position: relative; }
 .popover { position: absolute; z-index: 60; min-width: 320px; max-width: min(380px, calc(100vw - 32px)); background: var(--surface-raised); border: 1px solid var(--control-border); padding: 8px; }
@@ -849,6 +868,14 @@ button.tt-cell:hover { border: 1px solid var(--control-border); }
   .tenant-chip { display: none; }
   .liquid-item svg { display: none; }
 }
+/* Laptop widths: inactive nav items collapse to icons; the active one keeps its label */
+@media (max-width: 1200px) and (min-width: 961px) {
+  .liquid-item svg { display: inline-block; }
+  .liquid-item { padding: 0 12px; }
+  .liquid-item:not(.active) > span:not(.nav-badge) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .topbar { padding: 0 20px; gap: 12px; }
+  .topbar .brand-text { display: none; }
+}
 @media (max-width: 1360px) {
   .liquid-item { padding: 0 12px; font-size: 13px; }
   .tenant-chip { display: none; }
@@ -941,3 +968,5 @@ button.tt-cell:hover { border: 1px solid var(--control-border); }
   .tt { min-width: 0; }
   .modal-backdrop { position: static; background: none; }
 }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

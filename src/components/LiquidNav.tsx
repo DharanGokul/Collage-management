@@ -99,6 +99,7 @@ export function LiquidNav({ items, label }: { items: NavItem[]; label: string })
           to={it.to}
           end
           data-liquid
+          title={it.label}
           className={`liquid-item ${i === index ? 'active' : ''}`}
           onMouseEnter={() => prefetch(it.to)}
           onFocus={() => prefetch(it.to)}

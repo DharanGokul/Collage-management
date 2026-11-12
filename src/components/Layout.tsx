@@ -1,7 +1,7 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, GraduationCap, Wallet, CalendarCheck, CalendarDays, Mail, Settings, LogOut, Moon, Sun, BookOpen,
+  LayoutDashboard, Users, GraduationCap, Wallet, CalendarCheck, CalendarDays, Mail, Settings, LogOut, BookOpen,
   ClipboardCheck, Receipt, AlertTriangle, Plus, Search, Bell, MessageSquareText, PartyPopper, Grid2x2, CalendarRange, Megaphone,
   FilePlus2, UserPlus, X, ChevronRight, Home,
 } from 'lucide-react'
@@ -9,6 +9,7 @@ import { useStore } from '../store/AppStore'
 import { Avatar, Logo, Toasts } from './ui'
 import { LiquidNav, useActiveIndex, useLiquidBlob, type NavItem } from './LiquidNav'
 import { PageEnter, useEnter } from './motion'
+import ThemeSwitch from './ThemeSwitch'
 import { prefetch, prefetchRole } from '../routes'
 import type { Database, Role, Session } from '../types'
 import { agenda, countdown, fmtTime } from '../lib/agenda'
@@ -93,55 +94,12 @@ function navFor(role: Role, db: Database, s: Session) {
 const ROLE_LABEL: Record<Role, string> = { admin: 'Administrator', staff: 'Faculty', student: 'Student' }
 
 /* ------------------------------------------------------------------ */
-/* Theme (Noir is Caesar's primary theme)                             */
+/* Theme: Day (Marble) / Night (Noir) / Auto — see lib/themeMode.ts   */
 /* ------------------------------------------------------------------ */
 
-function readTheme(): 'dark' | 'light' {
-  try {
-    const v = localStorage.getItem('cms:theme')
-    if (v === 'dark' || v === 'light') return v
-  } catch {
-    /* ignore */
-  }
-  return 'dark'
-}
-
-// One shared theme store so every toggle (rail, login, mobile sheet) stays in sync.
-let currentTheme = readTheme()
-const themeListeners = new Set<() => void>()
-if (typeof document !== 'undefined') document.documentElement.dataset.theme = currentTheme
-function setThemeGlobal(t: 'dark' | 'light') {
-  currentTheme = t
-  document.documentElement.dataset.theme = t
-  try {
-    localStorage.setItem('cms:theme', t)
-  } catch {
-    /* ignore */
-  }
-  themeListeners.forEach((l) => l())
-}
-
-export function useTheme() {
-  const theme = useSyncExternalStore(
-    (cb) => {
-      themeListeners.add(cb)
-      return () => themeListeners.delete(cb)
-    },
-    () => currentTheme,
-  )
-  return [theme, () => setThemeGlobal(currentTheme === 'dark' ? 'light' : 'dark')] as const
-}
-
-export function ThemeToggle({ className = 'round-btn' }: { className?: string }) {
-  const [theme, toggle] = useTheme()
-  const dark = theme === 'dark'
-  return (
-    <button className={className} onClick={toggle} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title={dark ? 'Marble (light)' : 'Noir (dark)'}>
-      {dark ? <Sun size={18} /> : <Moon size={18} />}
-      {className === 'rail-btn' && <span className="rail-tip">{dark ? 'Light theme' : 'Dark theme'}</span>}
-      {className === 'sheet-tile' && <span>{dark ? 'Light theme' : 'Dark theme'}</span>}
-    </button>
-  )
+/** Kept for existing imports (login, platform console): the compact Day/Night/Auto switch. */
+export function ThemeToggle() {
+  return <ThemeSwitch />
 }
 
 /* ------------------------------------------------------------------ */
@@ -434,6 +392,7 @@ export default function Layout() {
             <Logo size={32} />
             <span className="ellipsis">{db.branding.collegeName}</span>
           </span>
+          <ThemeSwitch />
           {bell}
           <div className="user-chip">
             <Avatar name={session.name} size={36} />
@@ -472,7 +431,6 @@ export default function Layout() {
           </div>
         )}
         <div className="rail-group">
-          <ThemeToggle className="rail-btn" />
           <button className="rail-btn" onClick={signOut} aria-label="Sign out">
             <LogOut size={18} /><span className="rail-tip">Sign out</span>
           </button>
@@ -518,6 +476,10 @@ export default function Layout() {
 
       {sheet === 'more' && (
         <Sheet title={session.name} onClose={() => setSheet(null)}>
+          <div className="sheet-theme">
+            <span className="spec">Appearance</span>
+            <ThemeSwitch compact={false} />
+          </div>
           <div className="sheet-grid">
             {all.map((n) => (
               <button key={n.to} className={`sheet-tile ${loc.pathname === n.to ? 'active' : ''}`} onClick={() => go(n.to)}>
@@ -526,7 +488,6 @@ export default function Layout() {
                 {!!n.badge && <span className="count-dot">{n.badge}</span>}
               </button>
             ))}
-            <ThemeToggle className="sheet-tile" />
             <button className="sheet-tile" onClick={signOut}><LogOut size={18} /><span>Sign out</span></button>
           </div>
         </Sheet>
