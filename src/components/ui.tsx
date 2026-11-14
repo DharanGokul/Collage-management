@@ -248,7 +248,8 @@ export function Logo({ size = 36 }: { size?: number }) {
 export function usePaged<T>(rows: T[], size = 25) {
   const [page, setPage] = useState(0)
   const pages = Math.max(1, Math.ceil(rows.length / size))
-  useEffect(() => setPage(0), [rows])
+  // Back to page 1 when the result set changes size (filter/search) - not when a row is merely edited.
+  useEffect(() => setPage(0), [rows.length])
   const p = Math.min(page, pages - 1)
   return { items: rows.slice(p * size, p * size + size), page: p, pages, setPage, total: rows.length, size }
 }

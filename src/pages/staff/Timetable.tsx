@@ -14,7 +14,7 @@ export default function StaffTimetable() {
       <Card pad={false}>
         <div className="print-area">
           <h3 className="print-only">{session?.name} — Weekly timetable</h3>
-          <TimetableGrid slots={slots} cell={(s) => ({ title: db.subjects.find((x) => x.id === s.subjectId)?.name ?? '', lines: [classLabel(s.classKey), s.room] })} />
+          <TimetableGrid slots={slots} days={slots.some((x) => x.day >= 5) ? 6 : 5} cell={(s) => ({ title: db.subjects.find((x) => x.id === s.subjectId)?.name ?? '', lines: [classLabel(s.classKey), s.room] })} />
         </div>
       </Card>
     </>

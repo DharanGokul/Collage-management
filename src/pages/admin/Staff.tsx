@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Plus, Search, Pencil, Trash2, Download, Users } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Download, Users, Building2 } from 'lucide-react'
+import DepartmentsModal from './DepartmentsModal'
 import { useStore } from '../../store/AppStore'
 import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, usePaged } from '../../components/ui'
 import { downloadCSV, isValidEmail, uid } from '../../lib/utils'
@@ -10,6 +11,7 @@ export default function StaffPage() {
   const [q, setQ] = useState('')
   const [dept, setDept] = useState('all')
   const [editing, setEditing] = useState<Staff | null>(null)
+  const [depts, setDepts] = useState(false)
 
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase()
@@ -19,9 +21,11 @@ export default function StaffPage() {
 
   const remove = (s: Staff) => {
     const n = db.subjects.filter((x) => x.staffId === s.id).length
-    if (!confirm(`Delete ${s.name}?${n ? ` ${n} subject(s) will become unassigned.` : ''}`)) return
+    const hod = db.departments.find((x) => x.hodId === s.id)
+    if (!confirm(`Delete ${s.name}?${n ? ` ${n} subject(s) will become unassigned.` : ''}${hod ? ` They are HOD of ${hod.name}; that post will be vacant.` : ''}`)) return
     update((d) => {
       d.staff = d.staff.filter((x) => x.id !== s.id)
+      for (const dep of d.departments) if (dep.hodId === s.id) dep.hodId = null
       for (const sub of d.subjects) if (sub.staffId === s.id) sub.staffId = null
     })
     toast(`${s.name} deleted`)
@@ -34,6 +38,7 @@ export default function StaffPage() {
         subtitle="Faculty and administrative staff"
         actions={
           <>
+            <Button variant="secondary" icon={<Building2 size={16} />} onClick={() => setDepts(true)}>Departments &amp; HODs</Button>
             <Button variant="secondary" icon={<Download size={16} />} onClick={() => downloadCSV('staff.csv', [['Emp ID', 'Name', 'Email', 'Phone', 'Department', 'Designation', 'Status'], ...rows.map((s) => [s.empId, s.name, s.email, s.phone, s.department, s.designation, s.status])])}>Export CSV</Button>
             <Button icon={<Plus size={16} />} onClick={() => setEditing({ id: '', empId: '', name: '', email: '', phone: '', department: db.departments[0]?.code ?? '', designation: 'Assistant Professor', status: 'active', joinedOn: new Date().toISOString().slice(0, 10) })}>Add staff</Button>
           </>
@@ -87,6 +92,7 @@ export default function StaffPage() {
         )}
         <Pager {...paged} />
       </Card>
+      {depts && <DepartmentsModal onClose={() => setDepts(false)} />}
       {editing && (
         <StaffForm
           initial={editing}
@@ -96,6 +102,7 @@ export default function StaffPage() {
             update((d) => {
               if (isNew) d.staff.push({ ...s, id: uid('stf') })
               else d.staff = d.staff.map((x) => (x.id === s.id ? s : x))
+              if (s.status === 'inactive') for (const dep of d.departments) if (dep.hodId === s.id) dep.hodId = null
             })
             toast(isNew ? `${s.name} added` : 'Staff updated')
             setEditing(null)

@@ -29,16 +29,16 @@ export default function StaffStudents() {
         </div>
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>Student</th><th>Roll no</th><th>Phone</th><th>Guardian</th><th>My subjects</th></tr></thead>
+            <thead><tr><th>Student</th><th className="hide-sm">Roll no</th><th className="hide-sm">Phone</th><th className="hide-sm">Guardian</th><th>My subjects</th></tr></thead>
             <tbody>
               {rows.map((s) => {
                 const r = summarize(sessions, s.id)
                 return (
                   <tr key={s.id}>
-                    <td><div className="person"><Avatar name={s.name} size={32} /><div><strong>{s.name}</strong><div className="muted tiny">{s.email}</div></div></div></td>
-                    <td className="mono">{s.rollNo}</td>
-                    <td>{s.phone}</td>
-                    <td>{s.guardianName}<div className="muted tiny">{s.guardianPhone}</div></td>
+                    <td><div className="person"><Avatar name={s.name} size={32} /><div><strong>{s.name}</strong><div className="muted tiny"><span className="show-sm mono">{s.rollNo}</span><span className="hide-sm">{s.email}</span></div></div></div></td>
+                    <td className="mono hide-sm">{s.rollNo}</td>
+                    <td className="hide-sm"><a className="link" href={`tel:${s.phone}`}>{s.phone}</a></td>
+                    <td className="hide-sm">{s.guardianName}<div className="muted tiny">{s.guardianPhone}</div></td>
                     <td>{r.total ? <Badge tone={r.pct >= 85 ? 'green' : r.pct >= 75 ? 'amber' : 'red'}>{r.pct}% ({r.present + r.late}/{r.total})</Badge> : <span className="muted">—</span>}</td>
                   </tr>
                 )

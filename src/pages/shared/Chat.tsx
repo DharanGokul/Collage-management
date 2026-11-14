@@ -216,7 +216,7 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
             <textarea
               className="input"
               rows={1}
-              placeholder={`Message ${title}`}
+              placeholder="Type a message…"
               value={text}
               onChange={(e) => {
                 setText(e.target.value)

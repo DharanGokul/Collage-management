@@ -138,9 +138,14 @@ export function renderTemplate(text: string, vars: Record<string, string>) {
 
 export function downloadCSV(filename: string, rows: (string | number)[][]) {
   const csv = rows
-    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
-    .join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    .map((r) => r.map((c) => {
+      // Strip float noise (0.1+0.2); neutralise spreadsheet formulas in text cells.
+      let v = typeof c === 'number' ? String(Math.round(c * 1e6) / 1e6) : String(c)
+      if (typeof c === 'string' && /^[=@]/.test(v)) v = `'${v}`
+      return `"${v.replace(/"/g, '""')}"`
+    }).join(','))
+    .join('\r\n')
+  const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }) // BOM so Excel reads UTF-8 (₹, names)
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
   a.download = filename

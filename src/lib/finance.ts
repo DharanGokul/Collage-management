@@ -88,7 +88,11 @@ export const GST_RATES = [0, 5, 12, 18, 28]
 
 export function feeInvoiceItems(fee: FeeItem, gstRate: number): LineItem[] {
   // Fee amounts are GST-inclusive: back out the taxable value.
-  const { taxable } = splitInclusive(fee.amount, gstRate)
+  // Pick the taxable value whose rounded GST adds back to exactly the fee amount (avoids 1-paisa drift).
+  let { taxable } = splitInclusive(fee.amount, gstRate)
+  for (const c of [taxable, r2(taxable - 0.01), r2(taxable + 0.01)]) {
+    if (r2(c + r2((c * gstRate) / 100)) === r2(fee.amount)) { taxable = c; break }
+  }
   return [{ description: `${fee.name} (${fee.term})`, qty: 1, rate: taxable, gstRate }]
 }
 
@@ -128,7 +132,7 @@ export function accountBalance(db: Database, accountId: string, upTo?: string) {
  *  debit  → a paid bill with the same reference, or same net payable within ±3 days
  */
 export function suggestMatch(db: Database, t: { date: string; ref: string; debit: number; credit: number }) {
-  const near = (a: string, b: string) => Math.abs(new Date(a).getTime() - new Date(b).getTime()) <= 3 * 86400000
+  const near = (a: string, b: string) => Math.abs(new Date(a.slice(0, 10)).getTime() - new Date(b.slice(0, 10)).getTime()) <= 3 * 86400000
   const taken = new Set(db.bankTxns.filter((x) => x.match).map((x) => `${x.match!.type}:${x.match!.id}`))
   if (t.credit > 0) {
     const byRef = db.payments.find((p) => p.status === 'success' && t.ref && p.txnRef === t.ref && !taken.has(`payment:${p.id}`))
@@ -146,7 +150,7 @@ export function suggestMatch(db: Database, t: { date: string; ref: string; debit
 }
 
 /** Parse a bank statement CSV: Date, Description, Ref, Debit, Credit (header row optional). */
-export function parseStatementCsv(text: string): { date: string; description: string; ref: string; debit: number; credit: number }[] {
+export function parseStatementCsv(text: string, skipped?: { n: number }): { date: string; description: string; ref: string; debit: number; credit: number }[] {
   const rows: string[][] = []
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) continue
@@ -162,14 +166,19 @@ export function parseStatementCsv(text: string): { date: string; description: st
     cells.push(cur)
     rows.push(cells.map((c) => c.trim()))
   }
-  const num = (v: string) => Number((v || '0').replace(/[₹,\s]/g, '')) || 0
-  const toIso = (v: string) => {
+  const num = (v: string) => Math.abs(Number((v || '0').replace(/[₹,\s]|\b(Dr|Cr)\b\.?/gi, '')) || 0)
+  const MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+  const rawIso = (v: string) => {
+    const mn = v.match(/^(\d{1,2})[ -]([A-Za-z]{3})[a-z]*[ ,-]*(\d{2,4})$/)
+    if (mn && MON.includes(mn[2].toLowerCase())) return `${mn[3].length === 2 ? '20' + mn[3] : mn[3]}-${String(MON.indexOf(mn[2].toLowerCase()) + 1).padStart(2, '0')}-${mn[1].padStart(2, '0')}`
     const m = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/)
     if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
     return /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : ''
   }
-  return rows
-    .filter((r) => toIso(r[0]))
+  const toIso = (v: string) => { const i = rawIso(v); const d = new Date(i + 'T00:00:00Z'); return i && !isNaN(+d) && d.toISOString().slice(0, 10) === i ? i : '' } // rejects 31/02 etc.
+  const dated = rows.filter((r) => toIso(r[0]))
+  if (skipped) skipped.n = rows.length - dated.length - (rows.length && !toIso(rows[0][0]) ? 1 : 0) // first non-date row is the header
+  return dated
     .map((r) => ({ date: toIso(r[0]), description: r[1] ?? '', ref: r[2] ?? '', debit: num(r[3]), credit: num(r[4]) }))
     .filter((r) => r.debit > 0 || r.credit > 0)
 }

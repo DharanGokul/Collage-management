@@ -117,7 +117,14 @@ export function readImage(file: File, maxSize: number): Promise<string> {
     reader.onerror = () => reject(new Error('Could not read the file.'))
     reader.onload = () => {
       const url = reader.result as string
-      if (file.type === 'image/svg+xml') return resolve(url)
+      if (file.type === 'image/svg+xml') {
+        // Reject files that merely claim to be SVG (renamed text, truncated markup).
+        const probe = new Image()
+        probe.onerror = () => reject(new Error('This SVG could not be read - export it again from your design tool.'))
+        probe.onload = () => resolve(url)
+        probe.src = url
+        return
+      }
       const img = new Image()
       img.onerror = () => reject(new Error('This image could not be decoded.'))
       img.onload = () => {

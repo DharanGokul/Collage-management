@@ -5,7 +5,7 @@ import { useStore } from '../../store/AppStore'
 import { Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, Progress, Stat, usePaged } from '../../components/ui'
 import { ReportActions, money2, usePeriod } from './common'
 import { accountBalance, inPeriod, parseStatementCsv, periodLabel, periodRange, suggestMatch } from '../../lib/finance'
-import { downloadCSV, formatDate, uid } from '../../lib/utils'
+import { downloadCSV, formatDate, toISODate, uid } from '../../lib/utils'
 import type { BankTxn } from '../../types'
 
 export default function Bank() {
@@ -31,7 +31,7 @@ export default function Bank() {
   const opening = useMemo(() => {
     const prev = new Date(from + 'T00:00:00')
     prev.setDate(prev.getDate() - 1)
-    return accountBalance(db, acc, prev.toISOString().slice(0, 10))
+    return accountBalance(db, acc, toISODate(prev)) // local date: toISOString() shifts a day back east of UTC (IST)
   }, [db, acc, from])
   const lines = useMemo(() => {
     let bal = opening
@@ -108,20 +108,20 @@ export default function Bank() {
           <div className="table-wrap print-area">
             <h3 className="print-only">{account?.bank} statement · {periodLabel(period)} · opening {money2(opening)}</h3>
             <table className="table">
-              <thead><tr><th>Date</th><th>Description</th><th className="right">Debit</th><th className="right">Credit</th><th className="right hide-sm">Balance</th><th>Reconciliation</th></tr></thead>
+              <thead><tr><th>Date</th><th>Description</th><th className="right hide-sm">Debit</th><th className="right hide-sm">Credit</th><th className="right hide-sm">Balance</th><th>Reconciliation</th></tr></thead>
               <tbody>
                 {paged.items.map((l) => {
                   const sug = !l.match ? suggestMatch(db, l) : undefined
                   return (
                     <tr key={l.id}>
                       <td className="nowrap">{formatDate(l.date, { day: 'numeric', month: 'short' })}</td>
-                      <td>{l.description}<div className="muted tiny mono">{l.ref}</div></td>
-                      <td className="right text-red">{l.debit ? money2(l.debit) : ''}</td>
-                      <td className="right text-green">{l.credit ? money2(l.credit) : ''}</td>
+                      <td>{l.description}<div className="muted tiny mono">{l.ref}</div><strong className={`show-sm ${l.debit ? 'text-red' : 'text-green'}`}>{l.debit ? `−${money2(l.debit)}` : `+${money2(l.credit)}`}</strong></td>
+                      <td className="right text-red hide-sm">{l.debit ? money2(l.debit) : ''}</td>
+                      <td className="right text-green hide-sm">{l.credit ? money2(l.credit) : ''}</td>
                       <td className="right hide-sm">{money2(l.balance)}</td>
                       <td>
                         {l.match ? (
-                          <span className="row gap-s tiny" style={{ flexWrap: 'nowrap' }}><CheckCircle2 size={14} className="text-green" /><span className="ellipsis" style={{ maxWidth: 220 }}>{describe(l)}</span></span>
+                          <span className="row gap-s tiny" style={{ flexWrap: 'nowrap' }}><CheckCircle2 size={14} className="text-green" /><span className="ellipsis" style={{ maxWidth: 220 }}>{describe(l)}</span>{l.match.type === 'manual' && <button className="link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: '6px 4px' }} aria-label="Undo manual reconciliation" onClick={() => { update((d) => { const x = d.bankTxns.find((y) => y.id === l.id); if (x) delete x.match }); toast('Reconciliation undone', 'info') }}>Undo</button>}</span>
                         ) : (
                           <span className="row gap-s">
                             <Badge tone="amber"><CircleDashed size={12} /> unmatched</Badge>
@@ -134,7 +134,7 @@ export default function Bank() {
                   )
                 })}
               </tbody>
-              <tfoot><tr><td colSpan={2}><strong>Closing balance</strong></td><td className="right">{money2(debits)}</td><td className="right">{money2(credits)}</td><td className="right hide-sm"><strong>{money2(opening + credits - debits)}</strong></td><td /></tr></tfoot>
+              <tfoot><tr><td colSpan={2}><strong>Closing balance</strong><strong className="show-sm">{money2(opening + credits - debits)}</strong></td><td className="right hide-sm">{money2(debits)}</td><td className="right hide-sm">{money2(credits)}</td><td className="right hide-sm"><strong>{money2(opening + credits - debits)}</strong></td><td /></tr></tfoot>
             </table>
           </div>
         )}
@@ -176,7 +176,7 @@ function ImportStatement({ defaultAccount, onClose }: { defaultAccount: string; 
   const [acc, setAcc] = useState(defaultAccount)
   const [text, setText] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
-  const rows = useMemo(() => parseStatementCsv(text), [text])
+  const { rows, skipped } = useMemo(() => { const sk = { n: 0 }; return { rows: parseStatementCsv(text, sk), skipped: sk.n } }, [text])
   const dupes = rows.filter((r) => db.bankTxns.some((t) => t.accountId === acc && t.date === r.date && t.debit === r.debit && t.credit === r.credit && t.ref === r.ref))
   const fresh = rows.filter((r) => !dupes.includes(r))
   const matches = fresh.filter((r) => suggestMatch(db, r)).length
@@ -201,6 +201,8 @@ function ImportStatement({ defaultAccount, onClose }: { defaultAccount: string; 
         <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) setText(await f.text()); e.target.value = '' }} />
         <Field label="Or paste CSV" span={2} hint="Columns: Date, Description, Ref, Debit, Credit · dates DD/MM/YYYY or YYYY-MM-DD">{(id) => <textarea id={id} className="input mono-ish" rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder={SAMPLE} />}</Field>
       </div>
+      {text.trim() && rows.length === 0 && <div className="alert alert-warn tiny" role="alert">No valid statement lines found. Each row needs a date (DD/MM/YYYY, YYYY-MM-DD or 05-Nov-2026) in the first column and a debit or credit amount in column 4 or 5.</div>}
+      {rows.length > 0 && skipped > 0 && <div className="alert alert-warn tiny" role="alert">{skipped} row{skipped === 1 ? '' : 's'} skipped — unreadable date.</div>}
       {rows.length > 0 && (
         <>
           <p className="tiny"><strong>{rows.length}</strong> lines read · <strong>{fresh.length}</strong> new · {dupes.length} already imported · <strong>{matches}</strong> will auto-reconcile</p>

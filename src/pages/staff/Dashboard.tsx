@@ -78,7 +78,7 @@ export default function StaffDashboard() {
         <Card title="Up next" actions={<span className="muted tiny">{me?.designation}</span>}>
           <div className="stack">
             <UpNext item={upcoming[0] ?? null} onOpen={onItem} />
-            <ComingUp items={[...upcoming.slice(1, 4), ...nonClass.filter((i) => i.id !== upcoming[0]?.id).slice(0, 3)].slice(0, 6)} onOpen={onItem} />
+            <ComingUp items={[...upcoming.slice(1, 4), ...nonClass.filter((i) => i.id !== upcoming[0]?.id).slice(0, 3)].filter((i, n, arr) => arr.findIndex((x) => x.id === i.id) === n).slice(0, 6)} onOpen={onItem} />
           </div>
         </Card>
         <NeedsYou items={needs} />

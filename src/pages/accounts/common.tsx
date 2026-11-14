@@ -52,7 +52,7 @@ export function ReportActions({ onCsv, printLabel = 'Print / PDF' }: { onCsv: ()
 }
 
 /** Editable invoice/bill lines with per-line GST rate and live totals. */
-export function LineItemsEditor({ items, onChange, interState }: { items: LineItem[]; onChange: (i: LineItem[]) => void; interState: boolean }) {
+export function LineItemsEditor({ items, onChange, interState, totals = true }: { items: LineItem[]; onChange: (i: LineItem[]) => void; interState: boolean; totals?: boolean }) {
   const { db } = useStore()
   const cur = db.branding.currency
   const set = (i: number, patch: Partial<LineItem>) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x)))
@@ -83,7 +83,7 @@ export function LineItemsEditor({ items, onChange, interState }: { items: LineIt
       <div className="row gap-s">
         <Button size="sm" variant="ghost" icon={<Plus size={14} />} onClick={() => onChange([...items, { description: '', qty: 1, rate: 0, gstRate: 18 }])}>Add line</Button>
         <span className="spacer" />
-        <TotalsBlock t={t} interState={interState} />
+        {totals && <TotalsBlock t={t} interState={interState} />}
       </div>
     </div>
   )
@@ -108,8 +108,9 @@ export function amountInWords(n: number) {
   const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
   const two = (x: number) => (x < 20 ? a[x] : `${b[Math.floor(x / 10)]}${x % 10 ? ' ' + a[x % 10] : ''}`)
   const three = (x: number) => `${x >= 100 ? a[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' : '') : ''}${x % 100 ? two(x % 100) : ''}`
-  let r = Math.floor(n)
-  const paise = Math.round((n - r) * 100)
+  const totalPaise = Math.round(Math.abs(n) * 100) // whole paise first: 99.999 must not yield "100 paise"
+  let r = Math.floor(totalPaise / 100)
+  const paise = totalPaise % 100
   if (r === 0 && !paise) return 'Zero Only'
   const parts: string[] = []
   const crore = Math.floor(r / 1e7); r %= 1e7
@@ -119,5 +120,6 @@ export function amountInWords(n: number) {
   if (lakh) parts.push(`${two(lakh)} Lakh`)
   if (thousand) parts.push(`${two(thousand)} Thousand`)
   if (r) parts.push(three(r))
+  if (!parts.length) return `${two(paise)} Paise Only`
   return `Rupees ${parts.join(' ')}${paise ? ` and ${two(paise)} Paise` : ''} Only`
 }

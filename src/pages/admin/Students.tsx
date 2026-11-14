@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Search, Pencil, Trash2, Download, Mail, GraduationCap } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Download, Upload, Mail, GraduationCap } from 'lucide-react'
+import StudentImport from './StudentImport'
 import { useStore } from '../../store/AppStore'
 import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, usePaged } from '../../components/ui'
 import { downloadCSV, isValidEmail, studentFeeStatus, summarize, uid } from '../../lib/utils'
@@ -28,6 +29,7 @@ export default function Students() {
   const [dept, setDept] = useState('all')
   const [year, setYear] = useState('all')
   const [editing, setEditing] = useState<Student | null>(null)
+  const [importing, setImporting] = useState(false)
   // Deep links: ?new=1 opens the add form (Create menu); ?q= pre-fills search (global search).
   useEffect(() => {
     if (params.get('new')) {
@@ -89,6 +91,7 @@ export default function Students() {
         subtitle={`${db.students.length} enrolled across ${db.departments.length} departments`}
         actions={
           <>
+            <Button variant="secondary" icon={<Upload size={16} />} onClick={() => setImporting(true)}>Import CSV</Button>
             <Button variant="secondary" icon={<Download size={16} />} onClick={exportCsv}>Export CSV</Button>
             <Button icon={<Plus size={16} />} onClick={() => setEditing(blank(db.departments[0]?.code ?? '', db.sections[0] ?? 'A'))}>Add student</Button>
           </>
@@ -162,6 +165,7 @@ export default function Students() {
         )}
         <Pager {...paged} />
       </Card>
+      {importing && <StudentImport onClose={() => setImporting(false)} />}
       {editing && (
         <StudentForm
           initial={editing}

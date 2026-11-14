@@ -26,7 +26,7 @@ interface Item {
   ms: number
 }
 
-const MAX_VISIBLE = 4
+const MAX_VISIBLE_WIDE = 4
 const STAGGER_MS = 380
 const dismissedKey = (who: string) => `cms:dismissed:${who}`
 
@@ -58,6 +58,8 @@ const KIND_ICON: Record<AppNotification['kind'], ReactNode> = {
 }
 
 export default function Toaster() {
+  // Phones: keep the stack short so persistent toasts never bury the page.
+  const MAX_VISIBLE = typeof window !== 'undefined' && window.innerWidth <= 600 ? 2 : MAX_VISIBLE_WIDE
   const { db, session, toasts, dismissToast } = useStore()
   const go = useNavigate()
   const me = session ? `${session.role}:${session.userId}` : ''
@@ -88,7 +90,7 @@ export default function Toaster() {
     const fresh = mine.filter((n) => !seen.current.has(n.id) && !dismissed.current.has(n.id) && (n.at >= mountedAt.current || (n.important && Date.now() - new Date(n.at).getTime() < 7 * 86400000)))
     if (!fresh.length) return
     fresh.forEach((n) => seen.current.add(n.id))
-    setQueue((q) => [...q, ...fresh.map<Item>((n) => ({ id: n.id, title: n.title, body: n.body, tone: 'notify', important: n.important, kind: n.kind, link: n.link, ms: 6500 }))])
+    setQueue((q) => [...q, ...fresh.filter((n) => !q.some((x) => x.id === n.id)).map<Item>((n) => ({ id: n.id, title: n.title, body: n.body, tone: 'notify', important: n.important, kind: n.kind, link: n.link, ms: 6500 }))])
   }, [mine])
 
   // Backlog: make room by retiring the oldest normal toast (important ones always stay).
@@ -104,7 +106,7 @@ export default function Toaster() {
     if (!queue.length || shown.length >= MAX_VISIBLE) return
     const t = setTimeout(() => {
       setQueue((q) => q.slice(1))
-      setShown((s) => [...s, queue[0]])
+      setShown((s) => (s.some((x) => x.id === queue[0].id) ? s : [...s, queue[0]]))
     }, shown.length ? STAGGER_MS : 0)
     return () => clearTimeout(t)
   }, [queue, shown.length])

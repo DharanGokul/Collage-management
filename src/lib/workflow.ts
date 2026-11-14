@@ -29,7 +29,7 @@ export function afterHodApproval(db: Database, r: DeptRequest): DeptRequest['sta
 }
 
 export function canDecide(db: Database, s: Session, r: DeptRequest) {
-  if (r.status === 'pending_hod') return s.role === 'staff' && hodOf(db, r.department) === s.userId
+  if (r.status === 'pending_hod') return s.role === 'staff' ? hodOf(db, r.department) === s.userId : s.role === 'admin' && !hodOf(db, r.department) // vacant HOD post: management decides
   if (r.status === 'pending_admin') return s.role === 'admin'
   return false
 }
@@ -60,6 +60,7 @@ export function canDecideLeave(db: Database, s: Session, l: LeaveRequest) {
   if (l.status !== 'pending') return false
   if (l.approver === 'admin') return s.role === 'admin'
   const staff = db.staff.find((x) => x.id === l.staffId)
+  if (s.role === 'admin') return !!staff && !hodOf(db, staff.department) // vacant HOD post: management decides
   return s.role === 'staff' && !!staff && hodOf(db, staff.department) === s.userId
 }
 

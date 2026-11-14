@@ -288,6 +288,7 @@ html.theme-fade, html.theme-fade *, html.theme-fade *::before, html.theme-fade *
 .popover { position: absolute; z-index: 60; min-width: 320px; max-width: min(380px, calc(100vw - 32px)); background: var(--surface-raised); border: 1px solid var(--control-border); padding: 8px; }
 .popover.right { right: 0; top: calc(100% + 8px); }
 .popover.rail-pop { left: 56px; top: 0; }
+@media (max-width: 480px) { .popover.right { position: fixed; left: 16px; right: 16px; top: 64px; min-width: 0; max-width: none; background: var(--surface-solid, var(--surface-raised)); } }
 .popover-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; }
 .menu-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px; border: 0; background: none; text-align: left; cursor: pointer; color: var(--ink); }
 .menu-item:hover, .menu-item:focus-visible { background: var(--surface-hover); }
@@ -542,6 +543,13 @@ th.check, td.check { width: 44px; }
 .toast-more { pointer-events: auto; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: var(--radius-pill); background: var(--ink); color: var(--surface-solid, var(--surface)); box-shadow: var(--shadow); }
 @media (max-width: 960px) { .toaster { right: 16px; left: 16px; width: auto; bottom: calc(var(--tabbar-h) + 12px); } }
 /* A modal or sheet is open: float toasts at the top so they never cover its actions */
+@media (max-width: 600px) {
+  .toast2 { padding: 10px 6px 12px 12px; gap: 10px; }
+  .toast2-icon { display: none; }
+  .toast2-main p { -webkit-line-clamp: 1; }
+  .toast2-title { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .toast2-close { width: 40px; height: 40px; }
+}
 body.overlay-open .toaster { top: 16px; bottom: auto; flex-direction: column-reverse; }
 
 /* ---------- charts ---------- */
@@ -1320,6 +1328,8 @@ html { scroll-behavior: smooth; }
   .modal-backdrop { padding: 0; place-items: end center; }
   .modal { max-height: 92vh; border-left: 0; border-right: 0; border-bottom: 0; }
   .hide-sm { display: none; }
+  .mark { width: 44px; height: 40px; }
+  .table .show-sm { display: block; }
   .bar-label-long:has(+ .bar-label-short) { display: none; }
   .bar-label-short { display: inline; }
   .barchart { gap: 6px; }
@@ -1368,3 +1378,8 @@ html { scroll-behavior: smooth; }
 }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Accounts: sub-line shown only on small screens where the column it summarises is hidden */
+.show-sm { display: none; }
+.table .nowrap-cell { white-space: nowrap; }
+@media (max-width: 400px) { .upnext-art .slab-word { font-size: 32px; } }

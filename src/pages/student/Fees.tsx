@@ -139,7 +139,7 @@ function Checkout({ item, onClose, onPaid }: { item: FeeStatus; onClose: () => v
             <div><small className="muted">Paying for</small><strong>{item.fee.name}</strong></div>
             <div className="right"><small className="muted">Amount</small><strong className="big">{formatMoney(item.total, cur)}</strong></div>
           </div>
-          <Segmented label="Payment method" value={method} onChange={setMethod} options={[{ id: 'upi', label: 'UPI', icon: <Smartphone size={16} /> }, { id: 'card', label: 'Card', icon: <CreditCard size={16} /> }, { id: 'netbanking', label: 'Net banking', icon: <Landmark size={16} /> }]} />
+          <Segmented label="Payment method" value={method} onChange={setMethod} options={[{ id: 'upi', label: 'UPI', icon: <Smartphone size={16} /> }, { id: 'card', label: 'Card', icon: <CreditCard size={16} /> }, { id: 'netbanking', label: 'Netbanking', icon: <Landmark size={16} /> }]} />
           {method === 'upi' && <Field label="UPI ID">{(id) => <input id={id} className="input" placeholder="yourname@okbank" value={vpa} onChange={(e) => setVpa(e.target.value)} autoFocus />}</Field>}
           {method === 'card' && (
             <div className="form-grid">

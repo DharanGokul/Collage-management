@@ -84,7 +84,7 @@ export default function Bills() {
                     const v = db.vendors.find((x) => x.id === b.vendorId)
                     return (
                       <tr key={b.id}>
-                        <td><strong className="mono">{b.billNo}</strong><div className="muted tiny">{formatDate(b.date)} · due {formatDate(b.dueDate, { day: 'numeric', month: 'short' })}</div></td>
+                        <td className="nowrap-cell"><strong className="mono">{b.billNo}</strong><div className="tiny show-sm">{v?.name}</div><div className="muted tiny">{formatDate(b.date)} · due {formatDate(b.dueDate, { day: 'numeric', month: 'short' })}</div></td>
                         <td className="hide-sm">{v?.name}<div className="muted tiny ellipsis" style={{ maxWidth: 240 }}>{b.items.map((i) => i.description).join(', ')}</div></td>
                         <td className="hide-sm"><Badge tone="gray">{b.category}</Badge></td>
                         <td className="right">{money2(t.gst, cur)}</td>
@@ -132,6 +132,8 @@ function BillForm({ initial, onClose }: { initial: Bill; onClose: () => void }) 
     vendor: !b.vendorId && !newVendor?.name.trim() ? 'Choose or add a vendor' : null,
     billNo: !b.billNo.trim() ? 'Vendor’s bill / invoice number' : db.bills.some((x) => x.id !== b.id && x.vendorId === b.vendorId && x.billNo.toLowerCase() === b.billNo.trim().toLowerCase()) ? 'This bill number is already recorded for the vendor' : null,
     items: b.items.some((i) => !i.description.trim() || i.qty <= 0 || i.rate <= 0) ? 'Every line needs a description, quantity and rate' : null,
+    date: b.date > toISODate(new Date()) ? 'Bill date cannot be in the future' : !b.date ? 'Enter the bill date' : null,
+    due: b.dueDate && b.dueDate < b.date ? 'Due date is before the bill date' : null,
     gstin: newVendor && newVendor.gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/.test(newVendor.gstin) ? 'GSTIN format looks wrong' : null,
   }
   const pickVendor = (id: string) => {
@@ -187,12 +189,12 @@ function BillForm({ initial, onClose }: { initial: Bill; onClose: () => void }) 
         )}
         <Field label="Category">{(id) => <select id={id} className="input" value={b.category} onChange={(e) => set('category', e.target.value as BillCategory)}>{CATS.map((c) => <option key={c} value={c}>{c[0].toUpperCase() + c.slice(1)}</option>)}</select>}</Field>
         <div className="form-grid inner">
-          <Field label="Bill date">{(id) => <input id={id} type="date" className="input" value={b.date} onChange={(e) => set('date', e.target.value)} />}</Field>
-          <Field label="Due date">{(id) => <input id={id} type="date" className="input" value={b.dueDate} min={b.date} onChange={(e) => set('dueDate', e.target.value)} />}</Field>
+          <Field label="Bill date" error={touched ? errors.date : null}>{(id) => <input id={id} type="date" className="input" value={b.date} max={toISODate(new Date())} onChange={(e) => set('date', e.target.value)} />}</Field>
+          <Field label="Due date" error={touched ? errors.due : null}>{(id) => <input id={id} type="date" className="input" value={b.dueDate} min={b.date} onChange={(e) => set('dueDate', e.target.value)} />}</Field>
         </div>
         <label className="checkbox span-2"><input type="checkbox" checked={b.interState} onChange={(e) => set('interState', e.target.checked)} /> Inter-state supply (IGST instead of CGST + SGST)</label>
       </div>
-      <LineItemsEditor items={b.items} onChange={(items) => set('items', items)} interState={b.interState} />
+      <LineItemsEditor items={b.items} onChange={(items) => set('items', items)} interState={b.interState} totals={false} />
       {touched && errors.items && <div className="alert alert-warn tiny">{errors.items}</div>}
       <div className="form-grid">
         <Field label="TDS section" hint={b.tdsSection ? TDS_SECTIONS.find((x) => x.id === b.tdsSection)?.hint : 'Deduct tax at source when paying contractors, professionals, rent…'}>
@@ -218,7 +220,9 @@ function PayBill({ bill, onClose }: { bill: Bill; onClose: () => void }) {
   const [date, setDate] = useState(toISODate(new Date()))
   const [ref, setRef] = useState('')
   const v = db.vendors.find((x) => x.id === bill.vendorId)
+  const dateErr = !date ? 'Enter the payment date' : date > toISODate(new Date()) ? 'Payment date cannot be in the future' : date < bill.date ? 'Payment date is before the bill date' : null
   const pay = () => {
+    if (dateErr) return
     const paymentRef = ref.trim() || `NEFT-${Date.now().toString(36).toUpperCase()}`
     update((d) => {
       const b = d.bills.find((x) => x.id === bill.id)
@@ -236,12 +240,12 @@ function PayBill({ bill, onClose }: { bill: Bill; onClose: () => void }) {
     void session
   }
   return (
-    <Modal open title={`Pay ${bill.billNo}`} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button icon={<Banknote size={16} />} disabled={!acc} onClick={pay}>Pay {money2(t.payable)}</Button></>}>
+    <Modal open title={`Pay ${bill.billNo}`} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button icon={<Banknote size={16} />} disabled={!acc || !!dateErr} onClick={pay}>Pay {money2(t.payable)}</Button></>}>
       <p><strong>{v?.name}</strong> · {bill.items.map((i) => i.description).join(', ')}</p>
       <dl className="mini-dl"><dt>Bill total</dt><dd>{money2(t.total)}</dd>{t.tds > 0 && (<><dt>TDS withheld ({bill.tdsSection})</dt><dd>−{money2(t.tds)}</dd></>)}<dt>Amount to transfer</dt><dd><strong>{money2(t.payable)}</strong></dd></dl>
       <div className="form-grid">
         <Field label="From account">{(id) => <select id={id} className="input" value={acc} onChange={(e) => setAcc(e.target.value)}>{db.bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.bank} · {a.accountNo.slice(-4)}</option>)}</select>}</Field>
-        <Field label="Payment date">{(id) => <input id={id} type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
+        <Field label="Payment date" error={dateErr}>{(id) => <input id={id} type="date" className="input" value={date} min={bill.date} max={toISODate(new Date())} onChange={(e) => setDate(e.target.value)} />}</Field>
         <Field label="UTR / reference" span={2} hint="Leave empty to generate one">{(id) => <input id={id} className="input mono" value={ref} onChange={(e) => setRef(e.target.value)} />}</Field>
       </div>
     </Modal>
@@ -296,10 +300,10 @@ function Vendors() {
         </table>
       </div>
       {v && (
-        <Modal open title={v.id ? 'Edit vendor' : 'Add vendor'} onClose={() => setV(null)} footer={<><Button variant="secondary" onClick={() => setV(null)}>Cancel</Button><Button disabled={v.name.trim().length < 2} onClick={() => { update((d) => { if (v.id) d.vendors = d.vendors.map((x) => (x.id === v.id ? v : x)); else d.vendors.push({ ...v, id: uid('ven') }) }); toast('Vendor saved'); setV(null) }}>Save</Button></>}>
+        <Modal open title={v.id ? 'Edit vendor' : 'Add vendor'} onClose={() => setV(null)} footer={<><Button variant="secondary" onClick={() => setV(null)}>Cancel</Button><Button disabled={v.name.trim().length < 2 || (!!v.gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/.test(v.gstin))} onClick={() => { update((d) => { if (v.id) d.vendors = d.vendors.map((x) => (x.id === v.id ? v : x)); else d.vendors.push({ ...v, id: uid('ven') }) }); toast('Vendor saved'); setV(null) }}>Save</Button></>}>
           <div className="form-grid">
             <Field label="Name" span={2}>{(id) => <input id={id} className="input" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} autoFocus />}</Field>
-            <Field label="GSTIN">{(id) => <input id={id} className="input mono" value={v.gstin} onChange={(e) => { const g = e.target.value.toUpperCase(); setV({ ...v, gstin: g, state: /^\d{2}/.test(g) ? g.slice(0, 2) : v.state }) }} />}</Field>
+            <Field label="GSTIN" error={v.gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/.test(v.gstin) ? 'GSTIN format looks wrong' : null}>{(id) => <input id={id} className="input mono" value={v.gstin} onChange={(e) => { const g = e.target.value.toUpperCase(); setV({ ...v, gstin: g, state: /^\d{2}/.test(g) ? g.slice(0, 2) : v.state }) }} />}</Field>
             <Field label="PAN">{(id) => <input id={id} className="input mono" value={v.pan} onChange={(e) => setV({ ...v, pan: e.target.value.toUpperCase() })} />}</Field>
             <Field label="Email">{(id) => <input id={id} className="input" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} />}</Field>
             <Field label="Phone">{(id) => <input id={id} className="input" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} />}</Field>

@@ -5,7 +5,7 @@ import { Card, PageHeader, Stat } from '../../components/ui'
 import { BarChart } from '../../components/charts'
 import { ReportActions, money2, usePeriod } from './common'
 import { accountBalance, billTotals, collections, fyMonths, fyStartOf, inPeriod, lineTotals, periodLabel, periodRange, type Period } from '../../lib/finance'
-import { downloadCSV, studentFeeStatus } from '../../lib/utils'
+import { downloadCSV, studentFeeStatus, toISODate } from '../../lib/utils'
 import type { Database } from '../../types'
 
 type Report = 'collections' | 'expenses' | 'ie' | 'dues' | 'bank'
@@ -214,7 +214,7 @@ function BankSummary({ period }: { period: Period }) {
   prev.setDate(prev.getDate() - 1)
   const rows = db.bankAccounts.map((a) => {
     const lines = db.bankTxns.filter((t) => t.accountId === a.id && t.date >= from && t.date <= to)
-    return { a, opening: accountBalance(db, a.id, prev.toISOString().slice(0, 10)), credits: lines.reduce((x, l) => x + l.credit, 0), debits: lines.reduce((x, l) => x + l.debit, 0), closing: accountBalance(db, a.id, to), unmatched: lines.filter((l) => !l.match).length }
+    return { a, opening: accountBalance(db, a.id, toISODate(prev)), credits: lines.reduce((x, l) => x + l.credit, 0), debits: lines.reduce((x, l) => x + l.debit, 0), closing: accountBalance(db, a.id, to), unmatched: lines.filter((l) => !l.match).length }
   })
   return (
     <Card title="Bank summary" pad={false} actions={<ReportActions onCsv={() => downloadCSV(`bank-summary-${periodLabel(period).replace(/\s+/g, '-')}.csv`, [['Bank', 'Account', 'Opening', 'Credits', 'Debits', 'Closing', 'Unreconciled'], ...rows.map((r) => [r.a.bank, r.a.accountNo, r.opening, r.credits, r.debits, r.closing, r.unmatched])])} />}>

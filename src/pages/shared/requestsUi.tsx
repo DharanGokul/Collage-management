@@ -89,7 +89,7 @@ export function DecisionBar({ onApprove, onReject, approveLabel = 'Approve' }: {
   const [note, setNote] = useState('')
   return (
     <div className="decision">
-      <input className="input sm" style={{ flex: 1, minWidth: 160 }} placeholder="Note (optional, required to reject)" value={note} onChange={(e) => setNote(e.target.value)} aria-label="Decision note" />
+      <input className="input sm" style={{ flex: 1, minWidth: 160 }} placeholder="Note (required to reject)" value={note} onChange={(e) => setNote(e.target.value)} aria-label="Decision note" />
       <Button size="sm" variant="secondary" icon={<X size={14} />} disabled={!note.trim()} onClick={() => onReject(note.trim())}>Reject</Button>
       <Button size="sm" icon={<Check size={14} />} onClick={() => onApprove(note.trim())}>{approveLabel}</Button>
     </div>

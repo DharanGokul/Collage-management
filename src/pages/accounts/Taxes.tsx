@@ -144,8 +144,8 @@ function Tds({ period }: { period: Period }) {
 
 function ChallanForm({ onClose, onSave }: { onClose: () => void; onSave: (c: { id: string; month: string; section: string; amount: number; challanNo: string; depositedOn: string }) => void }) {
   const { db } = useStore()
-  const prev = new Date()
-  prev.setMonth(prev.getMonth() - 1)
+  const now = new Date()
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1) // not setMonth(): 31 Mar → "31 Feb" overflows
   const [month, setMonth] = useState(toISODate(prev).slice(0, 7))
   const [section, setSection] = useState('194C')
   const owed = tdsBySection(db, { kind: 'month', key: month }).find((r) => r.section === section)

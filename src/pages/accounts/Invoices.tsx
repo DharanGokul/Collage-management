@@ -89,7 +89,7 @@ export default function Invoices() {
                   const w = who(i)
                   return (
                     <tr key={i.id}>
-                      <td><strong className="mono tiny">{i.invoiceNo}</strong><div className="muted tiny">{formatDate(i.date)} · due {formatDate(i.dueDate, { day: 'numeric', month: 'short' })}</div></td>
+                      <td className="nowrap-cell"><strong className="mono tiny">{i.invoiceNo}</strong><div className="muted tiny">{formatDate(i.date)} · due {formatDate(i.dueDate, { day: 'numeric', month: 'short' })}</div></td>
                       <td>{w.name}<div className="muted tiny">{w.sub}</div></td>
                       <td className="right hide-sm">{money2(t.gst)}</td>
                       <td className="right"><strong>{money2(t.total)}</strong></td>
@@ -97,7 +97,7 @@ export default function Invoices() {
                       <td className="right nowrap">
                         <button className="icon-btn" aria-label={`View ${i.invoiceNo}`} onClick={() => setViewing(i)}><Eye size={16} /></button>
                         {i.kind === 'other' && st !== 'paid' && st !== 'void' && (
-                          <Button size="sm" variant="secondary" onClick={() => { const ref = prompt('Payment reference (UTR / cheque no.)') ?? ''; update((d) => { const x = d.invoices.find((y) => y.id === i.id); if (x) Object.assign(x, { status: 'paid', paidOn: toISODate(new Date()), paymentRef: ref || 'MANUAL' }) }); toast(`${i.invoiceNo} marked paid`) }}>Mark paid</Button>
+                          <Button size="sm" variant="secondary" onClick={() => { const ref = prompt('Payment reference (UTR / cheque no.)'); if (ref === null) return; update((d) => { const x = d.invoices.find((y) => y.id === i.id); if (x) Object.assign(x, { status: 'paid', paidOn: toISODate(new Date()), paymentRef: ref || 'MANUAL' }) }); toast(`${i.invoiceNo} marked paid`) }}>Mark paid</Button>
                         )}
                       </td>
                     </tr>
@@ -151,7 +151,8 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
   const { db, update, toast } = useStore()
   const [inv, setInv] = useState<Invoice>({ id: '', invoiceNo: '', kind: 'other', customer: { name: '', gstin: '', email: '' }, date: toISODate(new Date()), dueDate: toISODate(new Date(Date.now() + 15 * 86400000)), items: [{ description: '', qty: 1, rate: 0, gstRate: 18 }], interState: false, status: 'issued' })
   const c = inv.customer!
-  const valid = c.name.trim().length > 1 && inv.items.every((i) => i.description.trim() && i.qty > 0 && i.rate > 0) && (!c.gstin || /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/.test(c.gstin))
+  const dateErr = !inv.date ? 'Enter the invoice date' : inv.date > toISODate(new Date()) ? 'Invoice date cannot be in the future' : inv.dueDate < inv.date ? 'Due date is before the invoice date' : null
+  const valid = !dateErr && c.name.trim().length > 1 && inv.items.every((i) => i.description.trim() && i.qty > 0 && i.rate > 0) && (!c.gstin || /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/.test(c.gstin))
   const save = () => {
     update((d) => {
       const { yr, n } = nextNo(d.invoices)
@@ -167,8 +168,8 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
         <Field label="Customer GSTIN (optional)">{(id) => <input id={id} className="input mono" value={c.gstin} onChange={(e) => { const g = e.target.value.toUpperCase(); setInv({ ...inv, interState: /^\d{2}/.test(g) ? g.slice(0, 2) !== db.tax.stateCode : inv.interState, customer: { ...c, gstin: g } }) }} />}</Field>
         <Field label="Email">{(id) => <input id={id} className="input" value={c.email} onChange={(e) => setInv({ ...inv, customer: { ...c, email: e.target.value } })} />}</Field>
         <div className="form-grid inner">
-          <Field label="Date">{(id) => <input id={id} type="date" className="input" value={inv.date} onChange={(e) => setInv({ ...inv, date: e.target.value })} />}</Field>
-          <Field label="Due">{(id) => <input id={id} type="date" className="input" value={inv.dueDate} onChange={(e) => setInv({ ...inv, dueDate: e.target.value })} />}</Field>
+          <Field label="Date" error={dateErr}>{(id) => <input id={id} type="date" className="input" max={toISODate(new Date())} value={inv.date} onChange={(e) => setInv({ ...inv, date: e.target.value })} />}</Field>
+          <Field label="Due">{(id) => <input id={id} type="date" className="input" min={inv.date} value={inv.dueDate} onChange={(e) => setInv({ ...inv, dueDate: e.target.value })} />}</Field>
         </div>
         <label className="checkbox span-2"><input type="checkbox" checked={inv.interState} onChange={(e) => setInv({ ...inv, interState: e.target.checked })} /> Inter-state (IGST)</label>
       </div>

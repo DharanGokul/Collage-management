@@ -38,7 +38,7 @@ export default function AccountsOverview() {
   const overdueBills = db.bills.filter((b) => b.status !== 'paid' && b.status !== 'cancelled' && b.dueDate < today)
   const unmatched = db.bankTxns.filter((t) => !t.match).length
   const awaitingBill = db.requests.filter((r) => r.kind === 'purchase' && r.status === 'approved' && !r.billId)
-  const prevMonth = (() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return toISODate(d).slice(0, 7) })()
+  const prevMonth = (() => { const n = new Date(); return toISODate(new Date(n.getFullYear(), n.getMonth() - 1, 1)).slice(0, 7) })()
   const tdsPrev = tdsBySection(db, { kind: 'month', key: prevMonth }).reduce((a, r) => a + Math.max(0, r.amount - r.deposited), 0)
 
   const needs: Need[] = [

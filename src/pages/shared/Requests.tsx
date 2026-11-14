@@ -187,7 +187,8 @@ function NewRequest({ kind: initial, onClose }: { kind: DeptRequest['kind']; onC
 function ApplyLeave({ onClose }: { onClose: () => void }) {
   const { db, session, update, toast } = useStore()
   const me = db.staff.find((s) => s.id === session?.userId)
-  const tomorrow = toISODate(new Date(Date.now() + 86400000))
+  // Next working day (Sundays are not counted, so don't default to one).
+  const tomorrow = toISODate(new Date(Date.now() + 86400000 * (new Date(Date.now() + 86400000).getDay() === 0 ? 2 : 1)))
   const [type, setType] = useState<LeaveRequest['type']>('casual')
   const [from, setFrom] = useState(tomorrow)
   const [to, setTo] = useState(tomorrow)
@@ -217,7 +218,7 @@ function ApplyLeave({ onClose }: { onClose: () => void }) {
         <Field label="To">{(id) => <input id={id} type="date" className="input" value={to} min={from} onChange={(e) => setTo(e.target.value)} />}</Field>
         <Field label="Reason" span={2}>{(id) => <textarea id={id} className="input" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />}</Field>
       </div>
-      {err && reason && <div className="alert alert-warn tiny">{err}</div>}
+      {err && (reason || !err.startsWith('Give a short')) && <div className="alert alert-warn tiny">{err}</div>}
       <p className="muted tiny">Sundays are not counted. Goes to {approver === 'hod' ? 'your HOD' : 'management'} for approval.</p>
     </Modal>
   )

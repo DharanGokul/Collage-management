@@ -31,7 +31,7 @@ export default function StudentAttendance() {
             <tbody>
               {subjects.map((s) => {
                 const r = summarize(sessions.filter((a) => a.subjectId === s.id), me.id)
-                return <tr key={s.id}><td><strong>{s.name}</strong><div className="muted tiny mono">{s.code}</div></td><td>{r.present + r.late}/{r.total}</td><td>{r.total ? <div className="row gap-s"><Progress value={r.pct} /><span className="tiny">{r.pct}%</span></div> : <span className="muted">—</span>}</td></tr>
+                return <tr key={s.id}><td><strong>{s.name}</strong><div className="muted tiny mono">{s.code}</div></td><td>{r.present + r.late}/{r.total}</td><td>{r.total ? <div className="row gap-s"><Progress value={r.pct} /><span className={`tiny ${r.pct < 75 ? 'text-red' : ''}`}>{r.pct}%{r.pct < 75 && <span className="hide-sm"> · low</span>}</span></div> : <span className="muted">—</span>}</td></tr>
               })}
             </tbody>
           </table>

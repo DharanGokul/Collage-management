@@ -456,7 +456,8 @@ function DataTab() {
     try {
       const parsed = JSON.parse(await f.text())
       const required = ['branding', 'students', 'staff', 'subjects', 'timetable', 'attendance', 'fees', 'payments']
-      if (!required.every((k) => k in parsed)) throw new Error('Not a valid backup file')
+      if (!parsed || typeof parsed !== 'object' || !required.every((k) => k in parsed)) throw new Error('Not a valid backup file')
+      if (!['students', 'staff', 'subjects', 'timetable', 'attendance', 'fees', 'payments'].every((k) => Array.isArray(parsed[k])) || typeof parsed.branding !== 'object') throw new Error('Backup file is damaged - lists are missing')
       if (!confirm('Replace all current data with this backup?')) return
       // Keep this college's own URL settings: a backup from another college must not claim its sub-domain.
       update((d) => { Object.assign(d, parsed, { domain: d.domain }) })

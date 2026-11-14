@@ -4,7 +4,7 @@ import { Wrench, CalendarRange, UserRound, Receipt, Play, CheckCheck } from 'luc
 import { notify, useStore } from '../../store/AppStore'
 import { Avatar, Badge, Button, Empty, PageHeader, Tabs } from '../../components/ui'
 import { DecisionBar, RequestCard } from './requestsUi'
-import { formatDate, formatMoney } from '../../lib/utils'
+import { formatDate, formatMoney, toISODate, weekdayIndex } from '../../lib/utils'
 import { billTotals } from '../../lib/finance'
 import { afterHodApproval, canDecide, canDecideLeave, hodDepartment, hodOf, leaveBalance } from '../../lib/workflow'
 import type { DeptRequest } from '../../types'
@@ -154,6 +154,13 @@ export default function Approvals() {
                     <span><strong>{l.type[0].toUpperCase() + l.type.slice(1)} leave</strong> · {l.days} day{l.days > 1 ? 's' : ''} · {formatDate(l.from, { weekday: 'short', day: 'numeric', month: 'short' })}{l.to !== l.from ? ` – ${formatDate(l.to, { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}</span>
                     <span className="muted tiny">“{l.reason}”</span>
                     {bal.quota !== null && <span className="tiny">Balance: {bal.left} of {bal.quota} left</span>}
+                    {(() => {
+                      // Periods this person teaches while away — what the HOD must arrange cover for.
+                      const mine = new Set(db.subjects.filter((x) => x.staffId === l.staffId).map((x) => x.id))
+                      let n = 0
+                      for (let d = new Date(l.from + 'T00:00:00'); toISODate(d) <= l.to; d.setDate(d.getDate() + 1)) n += db.timetable.filter((t) => t.day === weekdayIndex(d) && mine.has(t.subjectId)).length
+                      return n > 0 ? <span className="tiny">Classes to cover: <strong>{n} period{n > 1 ? 's' : ''}</strong></span> : null
+                    })()}
                     {l.note && <span className="muted tiny">Decision note: “{l.note}” — {l.decidedBy}</span>}
                   </div>
                   {canDecideLeave(db, session, l) && (
