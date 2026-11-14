@@ -86,7 +86,7 @@ See [docs/college-needs-analysis.md](docs/college-needs-analysis.md) for the rea
 ## Design system — Caesar
 Styling is custom CSS on Caesar tokens, plus **Radix UI** primitives where accessibility matters (dialogs and the mobile sheet use `@radix-ui/react-dialog`: focus trap and restore, Escape, inert background, scroll lock). Add further Radix components (dropdown, tooltip, popover) the same way: unstyled, then styled with the Caesar classes.
 
-**Event cards** are a framed dark panel with a curved notch in the top-right corner that holds the date (`.event-card`, `.ev-tab` in `src/index.css`); the notch curves are pure CSS, so they stay smooth at any width and in both themes.
+**Event cards** are a framed panel filled with a gradient of the college's primary colour (it follows the colour picker and stays dark enough for white text on any colour), with a curved notch in the top-right corner that holds the date (`.event-card`, `.ev-tab` in `src/index.css`). The notch curves are pure CSS, so they stay smooth at any width and in both themes.
 
 The UI uses the **Caesar** design system: Black leads, Burgundy speaks once, White gives room.
 - The tokens in `src/index.css` mirror the system's `tokens.json`, with two themes: **Night** (Noir, dark) and **Day** (Marble, light).
