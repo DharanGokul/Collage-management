@@ -1474,3 +1474,8 @@ button.link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset
 .dns-optional { border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: 10px 14px; }
 .dns-optional summary { cursor: pointer; font-weight: 600; font-size: 14px; min-height: 28px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .dns-optional[open] summary { margin-bottom: 10px; }
+
+/* Keep focused or scrolled-to elements clear of the fixed bars (WCAG 2.4.11 Focus Not Obscured). Without this,
+   a button reached by keyboard or scrollIntoView can end up hidden behind the sticky header or the bottom tab bar. */
+html { scroll-padding-top: calc(var(--topbar-h) + 16px); scroll-padding-bottom: 24px; }
+@media (max-width: 960px) { html { scroll-padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px); } }
