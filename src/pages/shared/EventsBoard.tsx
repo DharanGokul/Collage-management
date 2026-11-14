@@ -3,7 +3,7 @@ import { MapPin, CalendarClock, PartyPopper } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
 import { useNow } from '../../lib/useNow'
 import { Button, Empty, PageHeader, Progress, Tabs } from '../../components/ui'
-import { EventDetail, KindBadge, useRegistration, whenText } from './eventsUi'
+import { EventDetail, KindBadge, kindStyle, useRegistration, whenText } from './eventsUi'
 import { canRegister, canSee, eventRange, myRegistration, registeredCount } from '../../lib/agenda'
 import type { CampusEvent } from '../../types'
 
@@ -50,30 +50,28 @@ export default function EventsBoard() {
             const n = registeredCount(e)
             const cap = e.registration.capacity
             return (
-              <article key={e.id} className="event-card">
-                <div className="event-date">
-                  <div className="event-date-block">
-                    <small>{start.toLocaleDateString(undefined, { month: 'short' })}</small>
+              <article key={e.id} className="event-card" style={kindStyle(e.kind)}>
+                <div className="ev-panel">
+                  {/* The date sits in the notch cut into the panel's corner. */}
+                  <div className="ev-tab" aria-label={whenText(e)}>
                     <strong>{start.getDate()}</strong>
-                    <small>{start.toLocaleDateString(undefined, { weekday: 'short' })}</small>
+                    <span><small>{start.toLocaleDateString(undefined, { month: 'short' })}</small><small>{start.toLocaleDateString(undefined, { weekday: 'short' })}</small></span>
                   </div>
-                  <div className="event-date-meta">
-                    <KindBadge kind={e.kind} />
-                    <h3 style={{ fontSize: 17 }}>{e.title}</h3>
+                  <KindBadge kind={e.kind} />
+                  <h3 className="ev-title">{e.title}</h3>
+                  <div className="ev-meta">
+                    <span><CalendarClock size={14} /> {whenText(e)}</span>
+                    {e.location && <span><MapPin size={14} /> {e.location}</span>}
                   </div>
-                </div>
-                <div className="event-card-body">
-                  <span className="row gap-s tiny"><CalendarClock size={14} className="muted" /> {whenText(e)}</span>
-                  {e.location && <span className="row gap-s tiny"><MapPin size={14} className="muted" /> {e.location}</span>}
-                  {e.description && <p className="muted tiny clamp">{e.description}</p>}
+                  {e.description && <p className="ev-desc clamp">{e.description}</p>}
                   {e.registration.enabled && (
-                    <div className="stack-s" style={{ gap: 4 }}>
-                      <span className="tiny muted">{n} going{cap ? ` · ${Math.max(0, cap - n)} seats left` : ''}</span>
+                    <div className="ev-seats">
+                      <span className="tiny">{n} going{cap ? ` · ${Math.max(0, cap - n)} seats left` : ''}</span>
                       {cap ? <Progress value={Math.round((n / cap) * 100)} tone={n >= cap ? 'red' : n / cap > 0.8 ? 'amber' : 'green'} /> : null}
                     </div>
                   )}
                 </div>
-                <div className="event-card-foot">
+                <div className="ev-foot">
                   <Button size="sm" variant="ghost" onClick={() => setViewing(e)}>Details</Button>
                   <span className="spacer" />
                   {e.registration.enabled &&

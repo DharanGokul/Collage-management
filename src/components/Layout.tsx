@@ -1,3 +1,4 @@
+import * as Dialog from '@radix-ui/react-dialog'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -328,27 +329,24 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   const ref = useRef<HTMLDivElement>(null)
   useEnter(ref, { yPercent: 100 }, 0.32)
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', k)
     overlayOpen(1)
-    return () => {
-      window.removeEventListener('keydown', k)
-      overlayOpen(-1)
-    }
-  }, [onClose])
+    return () => overlayOpen(-1)
+  }, [])
   return (
-    <>
-      <div className="sheet-backdrop" onClick={onClose} />
-      <div className="sheet" ref={ref} role="dialog" aria-label={title}>
-        <div className="sheet-grab" />
-        <div className="row mb">
-          <h3>{title}</h3>
-          <span className="spacer" />
-          <button className="icon-btn" onClick={onClose} aria-label="Close"><X size={18} /></button>
-        </div>
-        {children}
-      </div>
-    </>
+    <Dialog.Root open onOpenChange={(o) => { if (!o) onClose() }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="sheet-backdrop" />
+        <Dialog.Content className="sheet" ref={ref} aria-describedby={undefined}>
+          <div className="sheet-grab" />
+          <div className="row mb">
+            <Dialog.Title asChild><h3>{title}</h3></Dialog.Title>
+            <span className="spacer" />
+            <Dialog.Close asChild><button className="icon-btn" aria-label="Close"><X size={18} /></button></Dialog.Close>
+          </div>
+          {children}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }
 

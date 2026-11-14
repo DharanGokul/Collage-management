@@ -84,6 +84,10 @@ Dashboard, fee payment (demo checkout by UPI, card or net banking, with a printa
 See [docs/college-needs-analysis.md](docs/college-needs-analysis.md) for the real-world gap analysis and recommended next steps.
 
 ## Design system — Caesar
+Styling is custom CSS on Caesar tokens, plus **Radix UI** primitives where accessibility matters (dialogs and the mobile sheet use `@radix-ui/react-dialog`: focus trap and restore, Escape, inert background, scroll lock). Add further Radix components (dropdown, tooltip, popover) the same way: unstyled, then styled with the Caesar classes.
+
+**Event cards** are a framed dark panel with a curved notch in the top-right corner that holds the date (`.event-card`, `.ev-tab` in `src/index.css`); the notch curves are pure CSS, so they stay smooth at any width and in both themes.
+
 The UI uses the **Caesar** design system: Black leads, Burgundy speaks once, White gives room.
 - The tokens in `src/index.css` mirror the system's `tokens.json`, with two themes: **Night** (Noir, dark) and **Day** (Marble, light).
 - **Day / Night / Auto switch:** it sits in the top bar, in the mobile "More" sheet, and on the login and platform screens. **Auto** uses Day from 6 AM to 6 PM and Night otherwise. It flips live when the clock passes either time, and checks again when you return to the tab. A new theme spreads out in a circle from the switch where the browser supports View Transitions, and fades in elsewhere. The choice is saved per browser (`src/lib/themeMode.ts`).
