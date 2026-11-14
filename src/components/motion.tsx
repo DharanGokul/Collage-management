@@ -135,6 +135,9 @@ function countUp(el: HTMLElement) {
   const original = text?.data ?? ''
   const m = original.match(/^([^\d-]*)(-?[\d,]+(?:\.\d+)?)(.*)$/)
   if (!text || !m) return
+  // Money is never animated: a finance figure must not pass through values that were never true (screen readers,
+  // screenshots and copy/paste would capture them). Reduced-motion users get every number at once.
+  if (/[₹$€£]/.test(m[1]) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   const target = Number(m[2].replace(/,/g, ''))
   if (!isFinite(target) || target === 0) return
   const decimals = (m[2].split('.')[1] ?? '').length

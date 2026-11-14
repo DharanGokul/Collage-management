@@ -19,7 +19,7 @@ export default function Taxes() {
       <PageHeader title="Taxes" subtitle={`GST and TDS · ${periodLabel(period)}`} actions={picker} />
       <div className="alert alert-info tiny">
         <AlertTriangle size={14} />
-        <span>Education services to students are exempt from GST, so input GST on purchases is usually a cost, not a credit. TDS is deducted on the value before GST and deposited by the 7th of the next month (30 April for March). Check rates with your auditor — this is a working register, not tax advice.</span>
+        <span>Fees for courses leading to a qualification recognised by law are generally exempt from GST (coaching and other non-curricular income may be taxable), so input GST on purchases is usually a cost, not a credit. TDS is deducted on the value before GST and deposited by the 7th of the next month (30 April for March). Check rates with your auditor — this is a working register, not tax advice.</span>
       </div>
       <Tabs value={tab} onChange={setTab} items={[{ id: 'gst', label: 'GST', icon: <Percent size={16} /> }, { id: 'tds', label: 'TDS', icon: <Receipt size={16} /> }, { id: 'settings', label: 'Tax settings', icon: <Settings2 size={16} /> }]} />
       {tab === 'gst' && <Gst period={period} />}

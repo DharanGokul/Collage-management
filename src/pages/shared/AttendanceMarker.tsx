@@ -130,7 +130,7 @@ export default function AttendanceMarker({ subjects, markedBy }: { subjects: Sub
           target && roster.length > 0 ? (
             <>
               <Button size="sm" variant="secondary" icon={<CheckCheck size={14} />} onClick={() => setMarks(Object.fromEntries(roster.map((s) => [s.id, 'P'])))}>All present</Button>
-              <Button size="sm" icon={<Save size={14} />} disabled={isFuture} onClick={save}>{existing ? 'Update' : 'Save'}</Button>
+              <Button size="sm" variant={conflict ? 'danger' : 'primary'} icon={<Save size={14} />} disabled={isFuture} onClick={save}>{conflict ? 'Replace record' : existing ? 'Update' : 'Save'}</Button>
             </>
           ) : undefined
         }
@@ -168,6 +168,10 @@ export default function AttendanceMarker({ subjects, markedBy }: { subjects: Sub
                 </li>
               ))}
             </ul>
+            <div className="roster-summary" style={{ justifyContent: 'flex-end', borderTop: '1px solid var(--hairline)' }}>
+              <span className="muted tiny" style={{ marginRight: 'auto' }}>{roster.length} students · {counts.A ?? 0} absent</span>
+              <Button size="sm" variant={conflict ? 'danger' : 'primary'} icon={<Save size={14} />} disabled={isFuture} onClick={save}>{conflict ? `Replace ${conflict.name} record` : existing ? 'Update attendance' : 'Save attendance'}</Button>
+            </div>
           </>
         )}
       </Card>

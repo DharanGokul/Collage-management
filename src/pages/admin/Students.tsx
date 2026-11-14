@@ -220,10 +220,10 @@ function StudentForm({ initial, onClose, onSave }: { initial: Student; onClose: 
       }
     >
       <div className="form-grid">
-        <Field label="Full name" error={err('name')}>{(id) => <input id={id} className="input" value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus />}</Field>
-        <Field label="Roll number" error={err('rollNo')}>{(id) => <input id={id} className="input mono" value={f.rollNo} onChange={(e) => set('rollNo', e.target.value)} />}</Field>
-        <Field label="Email" error={err('email')}>{(id) => <input id={id} type="email" className="input" value={f.email} onChange={(e) => set('email', e.target.value)} />}</Field>
-        <Field label="Phone">{(id) => <input id={id} className="input" value={f.phone} onChange={(e) => set('phone', e.target.value)} />}</Field>
+        <Field label="Full name" required error={err('name')}>{(id) => <input id={id} className="input" value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus />}</Field>
+        <Field label="Roll number" required error={err('rollNo')}>{(id) => <input id={id} className="input mono" value={f.rollNo} onChange={(e) => set('rollNo', e.target.value)} />}</Field>
+        <Field label="Email" required error={err('email')}>{(id) => <input id={id} type="email" autoComplete="off" className="input" value={f.email} onChange={(e) => set('email', e.target.value)} />}</Field>
+        <Field label="Phone">{(id) => <input id={id} type="tel" inputMode="tel" autoComplete="off" className="input" value={f.phone} onChange={(e) => set('phone', e.target.value)} />}</Field>
         <Field label="Department">
           {(id) => (
             <select id={id} className="input" value={f.department} onChange={(e) => set('department', e.target.value)}>
@@ -248,7 +248,7 @@ function StudentForm({ initial, onClose, onSave }: { initial: Student; onClose: 
           </Field>
         </div>
         <Field label="Guardian name">{(id) => <input id={id} className="input" value={f.guardianName} onChange={(e) => set('guardianName', e.target.value)} />}</Field>
-        <Field label="Guardian phone">{(id) => <input id={id} className="input" value={f.guardianPhone} onChange={(e) => set('guardianPhone', e.target.value)} />}</Field>
+        <Field label="Guardian phone">{(id) => <input id={id} type="tel" inputMode="tel" autoComplete="off" className="input" value={f.guardianPhone} onChange={(e) => set('guardianPhone', e.target.value)} />}</Field>
         <Field label="Joined on">{(id) => <input id={id} type="date" className="input" value={f.joinedOn} onChange={(e) => set('joinedOn', e.target.value)} />}</Field>
         <Field label="Status">
           {(id) => (

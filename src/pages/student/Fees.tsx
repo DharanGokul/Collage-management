@@ -59,7 +59,7 @@ export default function StudentFees() {
       </Card>
       <Card title="Payment history" pad={false}>
         {history.length === 0 ? <Empty title="No payments yet" /> : (
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
             <table className="table">
               <thead><tr><th>Date</th><th>Fee</th><th className="hide-sm">Mode</th><th>Amount</th><th className="hide-sm">Status</th><th /></tr></thead>
               <tbody>

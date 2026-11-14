@@ -28,7 +28,7 @@ export default function TimetableGrid({
   const today = weekdayIndex(new Date(useNow()))
   const periods = [...db.periods].sort((a, b) => a.no - b.no)
   return (
-    <div className="tt-wrap">
+    <div className="tt-wrap" tabIndex={0} role="region" aria-label="Timetable (scrolls sideways)">
       <table className="tt">
         <thead>
           <tr>

@@ -139,10 +139,10 @@ function StaffForm({ initial, onClose, onSave }: { initial: Staff; onClose: () =
       }
     >
       <div className="form-grid">
-        <Field label="Full name" error={err('name')}>{(id) => <input id={id} className="input" value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus />}</Field>
-        <Field label="Employee ID" error={err('empId')}>{(id) => <input id={id} className="input mono" value={f.empId} onChange={(e) => set('empId', e.target.value)} />}</Field>
-        <Field label="Email" error={err('email')}>{(id) => <input id={id} type="email" className="input" value={f.email} onChange={(e) => set('email', e.target.value)} />}</Field>
-        <Field label="Phone">{(id) => <input id={id} className="input" value={f.phone} onChange={(e) => set('phone', e.target.value)} />}</Field>
+        <Field label="Full name" required error={err('name')}>{(id) => <input id={id} className="input" value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus />}</Field>
+        <Field label="Employee ID" required error={err('empId')}>{(id) => <input id={id} className="input mono" value={f.empId} onChange={(e) => set('empId', e.target.value)} />}</Field>
+        <Field label="Email" required error={err('email')}>{(id) => <input id={id} type="email" autoComplete="off" className="input" value={f.email} onChange={(e) => set('email', e.target.value)} />}</Field>
+        <Field label="Phone">{(id) => <input id={id} type="tel" inputMode="tel" autoComplete="off" className="input" value={f.phone} onChange={(e) => set('phone', e.target.value)} />}</Field>
         <Field label="Department">
           {(id) => (
             <select id={id} className="input" value={f.department} onChange={(e) => set('department', e.target.value)}>

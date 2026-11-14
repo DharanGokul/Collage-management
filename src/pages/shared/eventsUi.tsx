@@ -170,7 +170,7 @@ export function EventDetail({ event, onClose, onEdit }: { event: CampusEvent; on
             <span className="spacer" />
             <Button size="sm" variant="secondary" icon={<Download size={14} />} onClick={() => downloadCSV(`${live.title.replace(/\W+/g, '-').toLowerCase()}-registrations.csv`, [['Name', 'Role', 'Status', 'Registered at'], ...live.registrations.map((r) => [r.name, r.role, r.status, r.at])])}>CSV</Button>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
             <table className="table">
               <tbody>
                 {live.registrations.map((r) => (

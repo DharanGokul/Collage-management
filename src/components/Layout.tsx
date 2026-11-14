@@ -16,6 +16,7 @@ import { prefetch, prefetchRole } from '../routes'
 import type { Database, Role, Session } from '../types'
 import { agenda, countdown, fmtTime } from '../lib/agenda'
 import { useNow } from '../lib/useNow'
+import { initials } from '../lib/utils'
 import { hodDepartment, isHod, photoOf, unreadCount } from '../lib/workflow'
 
 /* ------------------------------------------------------------------ */
@@ -298,7 +299,10 @@ const tabRect = (el: HTMLElement) => ({ x: el.offsetLeft + el.offsetWidth / 2 - 
 function TabBar({ home, calendar, inbox, onCreate, onMore, moreActive }: { home: string; calendar: string; inbox: { to: string; label: string; badge: number; icon: 'chat' | 'inbox' }; onCreate: () => void; onMore: () => void; moreActive: boolean }) {
   const go = useNavigate()
   const items = [{ to: home }, { to: calendar }, { to: '#create' }, { to: inbox.to }, { to: '#more' }]
-  const routeIdx = useActiveIndex(items.slice(0, 4).map((x, i) => (i === 2 ? { to: '/__none' } : x)))
+  // Home is "/<role>", a prefix of every page, so it only counts on an exact match; other pages fall under More.
+  const { pathname } = useLocation()
+  const subIdx = useActiveIndex(items.slice(0, 4).map((x, i) => (i === 0 || i === 2 ? { to: '/__none' } : x)))
+  const routeIdx = pathname === home || pathname === home + '/' ? 0 : subIdx
   const idx = moreActive || routeIdx < 0 ? 4 : routeIdx
   const bar = useRef<HTMLElement>(null)
   const blob = useRef<HTMLSpanElement>(null)
@@ -454,7 +458,16 @@ export default function Layout() {
   }, [])
 
   const nav = useMemo(() => (session ? navFor(session.role, db, session) : null), [session, db])
-  const notices = useNotices(db, session ?? { role: 'admin', userId: '', name: '' })
+  const allNotices = useNotices(db, session ?? { role: 'admin', userId: '', name: '' })
+  // "Read" state is per person and per browser (a convenience, not a record).
+  const readKey = `cms:notif-read:${session?.role}:${session?.userId}`
+  const [readIds, setReadIds] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(readKey) || '[]') as string[] } catch { return [] } })
+  const markRead = (ids: string[]) => setReadIds((prev) => {
+    const next = [...new Set([...prev, ...ids])].slice(-300)
+    try { localStorage.setItem(readKey, JSON.stringify(next)) } catch { /* private mode */ }
+    return next
+  })
+  const notices = allNotices.filter((n) => !readIds.includes(n.id))
   if (!session || !nav) return null
   const all = [...nav.primary, ...nav.secondary]
   const signOut = () => {
@@ -468,14 +481,17 @@ export default function Layout() {
     <div className="pop-wrap" ref={bellRef}>
       <button className="round-btn" aria-label={`Notifications${notices.length ? ` (${notices.length})` : ''}`} aria-expanded={bellOpen} onClick={() => setBellOpen((o) => !o)}>
         <Bell size={18} />
-        {notices.length > 0 && <span className="count-dot">{notices.length}</span>}
+        {notices.length > 0 && <span className="count-dot" aria-hidden>{notices.length}</span>}
       </button>
       {bellOpen && (
         <Popover className="right">
-          <div className="popover-head"><span className="spec">Notifications</span></div>
+          <div className="popover-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span className="spec">Notifications</span>
+            {notices.length > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => markRead(allNotices.map((n) => n.id))}>Mark all read</button>}
+          </div>
           {notices.length === 0 && <p className="muted tiny" style={{ padding: 10 }}>You're all caught up.</p>}
           {notices.map((n) => (
-            <button key={n.id} className="menu-item" onClick={() => go(n.to)}>
+            <button key={n.id} role="menuitem" className="menu-item" onClick={() => { markRead([n.id]); go(n.to) }}>
               <span className="menu-icon">{n.icon}</span>
               <span className="ellipsis">
                 <strong className="ellipsis" style={{ display: 'block' }}>{n.title}</strong>
@@ -492,7 +508,7 @@ export default function Layout() {
     <div className={`shell ${scrolled ? 'scrolled' : ''}`}>
       {/* Desktop top bar */}
       <header className="topbar">
-        <Link to={`/${session.role}`} className="brand" aria-label="Home">
+        <Link to={`/${session.role}`} className="brand" title="Home">
           <Logo size={40} />
           <div className="brand-text">
             <strong>{db.branding.shortName || db.branding.collegeName}</strong>
@@ -509,7 +525,7 @@ export default function Layout() {
           </span>
           <ThemeSwitch />
           {bell}
-          <Link to={`/${session.role}/profile`} className="user-chip" aria-label="My profile" onMouseEnter={() => prefetch(`/${session.role}/profile`)}>
+          <Link to={`/${session.role}/profile`} className="user-chip" title="My profile" onMouseEnter={() => prefetch(`/${session.role}/profile`)}>
             <Avatar name={session.name} src={myPhoto} size={36} />
             <div className="user-meta">
               <strong>{session.name}</strong>
@@ -546,7 +562,7 @@ export default function Layout() {
 
       {/* Mobile header */}
       <header className="m-header">
-        <Link to={`/${session.role}`} className="brand" aria-label="Home">
+        <Link to={`/${session.role}`} className="brand" title="Home">
           <Logo size={36} />
           <div className="brand-text">
             <strong>{db.branding.shortName || db.branding.collegeName}</strong>
@@ -554,7 +570,7 @@ export default function Layout() {
         </Link>
         <button className="round-btn" aria-label="Search" onClick={() => setSearchOpen(true)}><Search size={18} /></button>
         {bell}
-        <button className="round-btn" aria-label="Account and more" onClick={() => setSheet('more')} style={{ padding: 0, overflow: 'hidden' }}>
+        <button className="round-btn" aria-label={`${initials(session.name)} Account and more`} onClick={() => setSheet('more')} style={{ padding: 0, overflow: 'hidden' }}>
           <Avatar name={session.name} src={myPhoto} size={42} />
         </button>
       </header>

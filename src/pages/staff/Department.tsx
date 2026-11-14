@@ -40,7 +40,7 @@ export default function Department() {
       </div>
       <div className="grid dash">
         <Card title="Faculty today" pad={false}>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
             <table className="table">
               <thead><tr><th>Faculty</th><th className="hide-sm">Subjects</th><th>Today</th><th>Attendance</th></tr></thead>
               <tbody>

@@ -25,7 +25,7 @@ export default function StudentAttendance() {
           </div>
         </Card>
         <Card title="By subject" pad={false}>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
           <table className="table">
             <thead><tr><th>Subject</th><th>Attended</th><th style={{ width: '40%' }}>%</th></tr></thead>
             <tbody>
@@ -40,7 +40,7 @@ export default function StudentAttendance() {
       </div>
       <Card title="Recent periods" pad={false}>
         {recent.length === 0 ? <Empty title="No attendance recorded yet" /> : (
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
             <table className="table">
               <thead><tr><th>Date</th><th>Period</th><th>Subject</th><th>Status</th></tr></thead>
               <tbody>

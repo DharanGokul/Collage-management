@@ -109,7 +109,7 @@ function LeavePanel({ leaves }: { leaves: LeaveRequest[] }) {
         <Empty icon={<CalendarRange />} title="No leave applications" />
       ) : (
         <div className="card" style={{ padding: 0 }}>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
             <table className="table">
               <thead><tr><th>Type</th><th>Dates</th><th>Days</th><th className="hide-sm">Reason</th><th>Status</th><th /></tr></thead>
               <tbody>

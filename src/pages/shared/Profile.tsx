@@ -8,7 +8,7 @@ import { AuthError } from '../../auth/types'
 import { checkPassword } from '../../auth/policy'
 import { PasswordField } from '../auth/parts'
 import { readImage } from '../../lib/theme'
-import { formatDate, formatMoney, isValidEmail, studentFeeStatus, uid } from '../../lib/utils'
+import { formatDate, formatMoney, isValidEmail, isValidPhone, studentFeeStatus, uid } from '../../lib/utils'
 import { displayName, hodDepartment, hodOf, isHod, leaveBalance, photoOf, roleLabel } from '../../lib/workflow'
 import type { ProfileChange, Student } from '../../types'
 
@@ -209,6 +209,9 @@ function ProfileForm({ current, student, pending, history, fileRef, onSave }: { 
   const set = <K extends keyof Editable>(k: K, v: Editable[K]) => setF((p) => ({ ...p, [k]: v }))
   const dirty = JSON.stringify(f) !== JSON.stringify(base)
   const emailErr = canEdit('email') && f.email && !isValidEmail(f.email) ? 'Enter a valid email' : null
+  const phoneMsg = 'Enter a 10-digit mobile number, e.g. 98765 43210'
+  const phoneErr = canEdit('phone') && !isValidPhone(f.phone) ? phoneMsg : null
+  const gPhoneErr = student && !isValidPhone(f.guardianPhone) ? phoneMsg : null
   const nameErr = canEdit('name') && f.name.trim().length < 2 ? 'Name is required' : null
   const hodName = student ? db.staff.find((s) => s.id === hodOf(db, student.department))?.name : undefined
 
@@ -293,12 +296,12 @@ function ProfileForm({ current, student, pending, history, fileRef, onSave }: { 
             <div className="form-grid">
               <Field label="Full name" error={nameErr} hint={ro('name') ? roHint : undefined}>{(id) => <input id={id} className="input" value={f.name} readOnly={ro('name')} onChange={(e) => set('name', e.target.value)} />}</Field>
               <Field label="Email" error={emailErr} hint={ro('email') ? roHint : undefined}>{(id) => <input id={id} className="input" type="email" value={f.email} readOnly={ro('email')} onChange={(e) => set('email', e.target.value)} />}</Field>
-              <Field label="Phone">{(id) => <input id={id} className="input" inputMode="tel" value={f.phone} readOnly={ro('phone')} onChange={(e) => set('phone', e.target.value)} />}</Field>
+              <Field label="Phone" error={phoneErr}>{(id) => <input id={id} className="input" inputMode="tel" autoComplete="tel" value={f.phone} readOnly={ro('phone')} onChange={(e) => set('phone', e.target.value)} />}</Field>
               {role !== 'student' && <Field label="Designation" hint={ro('designation') ? roHint : undefined}>{(id) => <input id={id} className="input" value={f.designation} readOnly={ro('designation')} onChange={(e) => set('designation', e.target.value)} />}</Field>}
               {student && (
                 <>
                   <Field label="Guardian name">{(id) => <input id={id} className="input" value={f.guardianName} onChange={(e) => set('guardianName', e.target.value)} />}</Field>
-                  <Field label="Guardian phone">{(id) => <input id={id} className="input" inputMode="tel" value={f.guardianPhone} onChange={(e) => set('guardianPhone', e.target.value)} />}</Field>
+                  <Field label="Guardian phone" error={gPhoneErr}>{(id) => <input id={id} className="input" inputMode="tel" autoComplete="off" value={f.guardianPhone} onChange={(e) => set('guardianPhone', e.target.value)} />}</Field>
                   <Field label="Roll number" hint="Set by the college">{(id) => <input id={id} className="input mono" value={student.rollNo} readOnly />}</Field>
                   <Field label="Class" hint="Set by the college">{(id) => <input id={id} className="input" value={`${student.department} · Year ${student.year} · Sec ${student.section}`} readOnly />}</Field>
                 </>
@@ -309,7 +312,7 @@ function ProfileForm({ current, student, pending, history, fileRef, onSave }: { 
             <div className="row gap-s mt">
               <span className="spacer" />
               {dirty && <Button variant="ghost" onClick={() => { setF(base); setReason(pending?.reason ?? '') }}>Discard</Button>}
-              <Button icon={student ? <Send size={16} /> : <Save size={16} />} disabled={!dirty || !!emailErr || !!nameErr} onClick={() => onSave(f, reason)}>
+              <Button icon={student ? <Send size={16} /> : <Save size={16} />} disabled={!dirty || !!emailErr || !!nameErr || !!phoneErr || !!gPhoneErr} onClick={() => onSave(f, reason)}>
                 {student ? (pending ? 'Update request' : 'Submit for approval') : 'Save changes'}
               </Button>
             </div>

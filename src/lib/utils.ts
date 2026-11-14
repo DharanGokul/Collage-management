@@ -52,6 +52,13 @@ export const initials = (name: string) =>
     .join('')
 
 export const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim())
+/** Indian mobile: 10 digits starting 6-9, optionally written with +91 / 91 / 0 and spaces or dashes. Landlines/other countries: 7-15 digits after a leading +. */
+export const isValidPhone = (p: string) => {
+  const t = p.trim().replace(/[\s-]/g, '')
+  if (!t) return true
+  if (/^(\+91|91|0)?[6-9]\d{9}$/.test(t)) return true
+  return /^\+(?!91)\d{7,15}$/.test(t)
+}
 
 /* ---------- Fees ---------- */
 

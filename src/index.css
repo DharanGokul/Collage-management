@@ -403,6 +403,7 @@ select.input { cursor: pointer; }
 .field > label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
 .field small { font-size: 13px; }
 .field-error { color: var(--danger); }
+.field .req { color: var(--danger); font-weight: 700; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-grid.inner { gap: 12px; }
 .span-2 { grid-column: span 2; }
@@ -1353,6 +1354,14 @@ html { scroll-behavior: smooth; }
   .modal-backdrop { padding: 0; place-items: end center; }
   .modal { max-height: 92vh; border-left: 0; border-right: 0; border-bottom: 0; }
   .hide-sm { display: none; }
+  /* Keep row actions on screen: tighter cells, ellipsis on long emails so Edit/Delete never sit off-canvas. */
+  .table th, .table td { padding-left: 8px; padding-right: 8px; }
+  .table td .person { gap: 8px; min-width: 0; }
+  .table td .person > div { min-width: 0; }
+  .table td .person .muted.tiny { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .table td .person .avatar { display: none; }
+  .table th.right:last-child, .table td.right.nowrap:last-child { position: sticky; right: 0; background: var(--surface-raised); box-shadow: -8px 0 8px -8px rgb(0 0 0 / 0.35); padding-left: 4px; padding-right: 4px; }
+  .table td.right.nowrap .icon-btn { width: 36px; height: 36px; }
   .mark { width: 44px; height: 40px; }
   .table .show-sm { display: block; }
   .bar-label-long:has(+ .bar-label-short) { display: none; }
@@ -1378,6 +1387,10 @@ html { scroll-behavior: smooth; }
   input[type='checkbox'], input[type='radio'] { width: 22px; height: 22px; }
   th.check, td.check { width: 48px; }
   .live-url a.mono { display: inline-block; padding: 4px 0; }
+  /* Touch targets: 44px (WCAG 2.5.8 asks 24px minimum; 44px is the comfortable size). */
+  .btn-sm, .chip { min-height: 44px; }
+  .icon-btn, .icon-btn.sm { min-width: 44px; min-height: 44px; }
+  .segmented button { min-height: 44px; }
 }
 @media (max-width: 480px) {
   .segmented button { padding: 0 8px; font-size: 13px; }

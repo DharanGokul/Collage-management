@@ -159,7 +159,7 @@ export function SuperConsole() {
           <Stat label="Colleges" value={rows.length} icon={<Building2 size={20} />} hint={`${active} active`} />
           <Stat label="Students on platform" value={rows.reduce((a, r) => a + r.students, 0)} icon={<GraduationCap size={20} />} tone="green" />
           <Stat label="Staff on platform" value={rows.reduce((a, r) => a + r.staff, 0)} icon={<Users size={20} />} tone="blue" />
-          <Stat label="Monthly recurring" value={formatMoney(mrr, 'INR')} icon={<Wallet size={20} />} tone="amber" hint="from active plans" />
+          <Stat label="Monthly recurring" value={formatMoney(mrr, 'INR')} icon={<Wallet size={20} />} tone="amber" hint="from active plans, per month" />
         </div>
         <Card pad={false}>
           <div className="toolbar">
@@ -194,7 +194,7 @@ export function SuperConsole() {
                             {(Object.keys(PLANS) as TenantPlan[]).map((p) => <option key={p} value={p}>{PLANS[p].label}</option>)}
                           </select>
                         </td>
-                        <td>{students}{over && <div className="text-red tiny">over {plan.students} limit</div>}</td>
+                        <td>{students}{over && <div className="text-red tiny">over the {plan.students.toLocaleString('en-IN')}-student limit</div>}</td>
                         <td>{formatMoney(collected, 'INR')}</td>
                         <td>{t.status === 'suspended' ? <Badge tone="red">suspended</Badge> : <Badge tone="green">active</Badge>}</td>
                         <td className="right nowrap">
@@ -261,7 +261,7 @@ function OnboardModal({ existing, onClose, onCreated }: { existing: TenantRef[];
       }
     >
       <div className="form-grid">
-        <Field label="College name" span={2} error={err('name')}>{(id) => <input id={id} className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="St. Joseph's College of Engineering" autoFocus />}</Field>
+        <Field label="College name" span={2} required error={err('name')}>{(id) => <input id={id} className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="St. Joseph's College of Engineering" autoFocus />}</Field>
         <Field label="Portal URL" span={2} hint="Generated from the college name – you can edit it" error={err('slug')}>
           {(id) => (
             <div className="input-group">
@@ -271,8 +271,8 @@ function OnboardModal({ existing, onClose, onCreated }: { existing: TenantRef[];
             </div>
           )}
         </Field>
-        <Field label="College admin email" error={err('email')} hint="Their login for the college Admin portal">{(id) => <input id={id} className="input" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="principal@college.edu" />}</Field>
-        <Field label="Plan">{(id) => <select id={id} className="input" value={plan} onChange={(e) => setPlan(e.target.value as TenantPlan)}>{(Object.keys(PLANS) as TenantPlan[]).map((p) => <option key={p} value={p}>{PLANS[p].label} – {Number.isFinite(PLANS[p].students) ? `${PLANS[p].students} students` : 'unlimited'} · {formatMoney(PLANS[p].price, 'INR')}/mo</option>)}</select>}</Field>
+        <Field label="College admin email" required error={err('email')} hint="Their login for the college Admin portal">{(id) => <input id={id} className="input" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="principal@college.edu" />}</Field>
+        <Field label="Plan">{(id) => <select id={id} className="input" value={plan} onChange={(e) => setPlan(e.target.value as TenantPlan)}>{(Object.keys(PLANS) as TenantPlan[]).map((p) => <option key={p} value={p}>{PLANS[p].label} – {Number.isFinite(PLANS[p].students) ? `up to ${PLANS[p].students.toLocaleString('en-IN')} students` : 'unlimited students'} · {formatMoney(PLANS[p].price, 'INR')}/mo</option>)}</select>}</Field>
         <div className="field span-2">
           <label>Starting brand colour</label>
           <div className="swatches">{PRESET_COLORS.map((c) => <button key={c} className={`swatch ${color === c ? 'on' : ''}`} style={{ background: c }} aria-label={`Use ${c}`} onClick={() => setColor(c)} />)}</div>

@@ -20,7 +20,7 @@ export default function Approvals() {
   const dept = !isAdmin ? hodDepartment(db, session?.userId) : undefined
   // The URL owns the tab, so links from toasts/notifications switch it even when this page is already open.
   const tabParam = params.get('tab') as Tab | null
-  const tab: Tab = tabParam && ['requests', 'leave', 'profile', 'bills'].includes(tabParam) ? tabParam : 'requests'
+  const explicitTab: Tab | null = tabParam && ['requests', 'leave', 'profile', 'bills'].includes(tabParam) ? tabParam : null
   const setTab = (t: Tab) => {
     const p = new URLSearchParams(params)
     p.set('tab', t)
@@ -41,6 +41,8 @@ export default function Approvals() {
   )
   const bills = useMemo(() => (isAdmin ? db.bills.filter((b) => (showDone ? b.status !== 'pending' : b.status === 'pending')) : []), [db.bills, isAdmin, showDone])
 
+  // With no tab in the URL, open the first tab that has something waiting (not an empty "Equipment" tab while Leave has a request).
+  const tab: Tab = explicitTab ?? (reqs.length ? 'requests' : leaves.length ? 'leave' : profiles.length ? 'profile' : bills.length ? 'bills' : 'requests')
   if (!session || (!isAdmin && !dept)) return <Empty title="Approvals are for HODs and management" />
   const actor = isAdmin ? 'Management' : session.name
   const now = () => new Date().toISOString()

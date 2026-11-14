@@ -27,7 +27,7 @@ export default function StaffStudents() {
           <div className="chips">{classes.map((k) => <button key={k} className={`chip ${k === cls ? 'active' : ''}`} onClick={() => setCls(k)}>{classLabel(k)}</button>)}</div>
           <div className="search"><Search size={16} /><input className="input" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search students" /></div>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
           <table className="table">
             <thead><tr><th>Student</th><th className="hide-sm">Roll no</th><th className="hide-sm">Phone</th><th className="hide-sm">Guardian</th><th>My subjects</th></tr></thead>
             <tbody>

@@ -83,22 +83,37 @@ export function Avatar({ name, src, size = 36 }: { name: string; src?: string | 
   )
 }
 
-export function Progress({ value, tone }: { value: number; tone?: 'green' | 'amber' | 'red' }) {
+export function Progress({ value, tone, label }: { value: number; tone?: 'green' | 'amber' | 'red'; label?: string }) {
   const t = tone ?? (value >= 85 ? 'green' : value >= 75 ? 'amber' : 'red')
   return (
-    <div className="progress" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
+    <div className="progress" role="progressbar" aria-label={label ?? 'Progress'} aria-valuetext={`${Math.round(value)}%`} aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
       <div className={`progress-bar tone-bg-${t}`} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
     </div>
   )
 }
 
-export function Field({ label, hint, error, children, span }: { label: string; hint?: ReactNode; error?: string | null; children: (id: string) => ReactNode; span?: 2 }) {
+export function Field({ label, hint, error, children, span, required }: { label: string; hint?: ReactNode; error?: string | null; children: (id: string) => ReactNode; span?: 2; required?: boolean }) {
   const id = useId()
+  const note = `${id}-note`
+  const ref = useRef<HTMLDivElement>(null)
+  // Wire the control to its hint/error and required state for assistive tech without every call site passing props.
+  useEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>(`[id="${id}"]`)
+    if (!el) return
+    if (error || hint) el.setAttribute('aria-describedby', note)
+    else el.removeAttribute('aria-describedby')
+    if (error) el.setAttribute('aria-invalid', 'true')
+    else el.removeAttribute('aria-invalid')
+    if (required) el.setAttribute('aria-required', 'true')
+  })
   return (
-    <div className={`field ${span === 2 ? 'span-2' : ''}`}>
-      <label htmlFor={id}>{label}</label>
+    <div ref={ref} className={`field ${span === 2 ? 'span-2' : ''}`}>
+      <label htmlFor={id}>
+        {label}
+        {required && <span className="req" aria-hidden title="Required"> *</span>}
+      </label>
       {children(id)}
-      {error ? <small className="field-error">{error}</small> : hint ? <small className="muted">{hint}</small> : null}
+      {error ? <small id={note} className="field-error" role="alert">{error}</small> : hint ? <small id={note} className="muted">{hint}</small> : null}
     </div>
   )
 }
