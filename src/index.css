@@ -1304,6 +1304,8 @@ html { scroll-behavior: smooth; }
   .inbox { grid-template-columns: 1fr; min-height: 0; }
   .inbox.has-detail .inbox-list { display: none; }
   .inbox:not(.has-detail) .tk-detail { display: none; }
+  .chat-layout .thread { max-height: max(220px, calc(100dvh - 440px)); padding: 14px 14px; }
+  .chat-layout .composer { padding: 10px 14px; }
   .upnext { grid-template-columns: 1fr; }
   .upnext-art { min-height: 96px; }
   .upnext-art .slab-word { transform: translate(-50%, -50%); font-size: 44px; }
