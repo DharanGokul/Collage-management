@@ -75,7 +75,8 @@ function Dues() {
     })
     setSending(false)
     setSelected(new Set())
-    res.failed ? toast(`${res.sent} sent, ${res.failed} failed – see Email Center`, res.sent ? 'info' : 'error') : toast(`Reminder sent to ${res.sent} student(s)`)
+    if (res.failed) toast(`${res.sent} sent, ${res.failed} failed – see Email Center`, res.sent ? 'info' : 'error')
+    else toast(`Reminder sent to ${res.sent} student(s)`)
   }
 
   if (!fee) return <Card><Empty title="No fee items">Create a fee in the Fee structure tab.</Empty></Card>
@@ -112,7 +113,7 @@ function Dues() {
               <tr key={s.id}>
                 <td className="check">
                   {st.status !== 'paid' && (
-                    <input type="checkbox" aria-label={`Select ${s.name}`} checked={selected.has(s.id)} onChange={() => setSelected((p) => { const n = new Set(p); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n })} />
+                    <input type="checkbox" aria-label={`Select ${s.name}`} checked={selected.has(s.id)} onChange={() => setSelected((p) => { const n = new Set(p); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); return n })} />
                   )}
                 </td>
                 <td><strong>{s.name}</strong><div className="muted tiny mono">{s.rollNo}</div></td>

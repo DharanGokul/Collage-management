@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { MapPin, CalendarClock, PartyPopper } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
+import { useNow } from '../../lib/useNow'
 import { Button, Empty, PageHeader, Progress, Tabs } from '../../components/ui'
 import { EventDetail, KindBadge, useRegistration, whenText } from './eventsUi'
 import { canRegister, canSee, eventRange, myRegistration, registeredCount } from '../../lib/agenda'
@@ -14,9 +15,9 @@ export default function EventsBoard() {
   const { register, cancel } = useRegistration()
   const [tab, setTab] = useState<Tab>('open')
   const [viewing, setViewing] = useState<CampusEvent | null>(null)
-  const now = new Date()
+  const now = useNow()
 
-  const visible = useMemo(() => (session ? db.events.filter((e) => canSee(db, session, e) && eventRange(e).end >= now) : []), [db, session]) // eslint-disable-line react-hooks/exhaustive-deps
+  const visible = useMemo(() => (session ? db.events.filter((e) => canSee(db, session, e) && eventRange(e).end >= new Date(now)) : []), [db, session, now])
   if (!session) return null
   const lists: Record<Tab, CampusEvent[]> = {
     open: visible.filter((e) => e.registration.enabled && canRegister(db, session, e).ok),

@@ -7,6 +7,7 @@ import { LineItemsEditor, ReportActions, TotalsBlock, amountInWords, money2, use
 import { feeAppliesTo, downloadCSV, formatDate, toISODate, uid } from '../../lib/utils'
 import { feeInvoiceItems, inPeriod, invoicePayment, invoiceStatus, invoiceTotals, lineTotals, periodLabel } from '../../lib/finance'
 import type { Invoice } from '../../types'
+import { useNow } from '../../lib/useNow'
 
 const TONE = { issued: 'blue', paid: 'green', overdue: 'red', void: 'gray' } as const
 
@@ -23,6 +24,7 @@ export default function Invoices() {
 
   useEffect(() => {
     if (params.get('new')) {
+      // oxlint-disable-next-line react/set-state-in-effect -- one-shot: consumes a URL query param (external router state) into local state, then clears it
       setTab('other')
       setCreating(true)
       params.delete('new')
@@ -148,10 +150,11 @@ function GenerateFeeInvoices({ onClose }: { onClose: () => void }) {
 }
 
 function NewInvoice({ onClose }: { onClose: () => void }) {
+  const now = useNow()
   const { db, update, toast } = useStore()
-  const [inv, setInv] = useState<Invoice>({ id: '', invoiceNo: '', kind: 'other', customer: { name: '', gstin: '', email: '' }, date: toISODate(new Date()), dueDate: toISODate(new Date(Date.now() + 15 * 86400000)), items: [{ description: '', qty: 1, rate: 0, gstRate: 18 }], interState: false, status: 'issued' })
+  const [inv, setInv] = useState<Invoice>({ id: '', invoiceNo: '', kind: 'other', customer: { name: '', gstin: '', email: '' }, date: toISODate(new Date(now)), dueDate: toISODate(new Date(now + 15 * 86400000)), items: [{ description: '', qty: 1, rate: 0, gstRate: 18 }], interState: false, status: 'issued' })
   const c = inv.customer!
-  const dateErr = !inv.date ? 'Enter the invoice date' : inv.date > toISODate(new Date()) ? 'Invoice date cannot be in the future' : inv.dueDate < inv.date ? 'Due date is before the invoice date' : null
+  const dateErr = !inv.date ? 'Enter the invoice date' : inv.date > toISODate(new Date(now)) ? 'Invoice date cannot be in the future' : inv.dueDate < inv.date ? 'Due date is before the invoice date' : null
   const valid = !dateErr && c.name.trim().length > 1 && inv.items.every((i) => i.description.trim() && i.qty > 0 && i.rate > 0) && (!c.gstin || /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/.test(c.gstin))
   const save = () => {
     update((d) => {
@@ -168,7 +171,7 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
         <Field label="Customer GSTIN (optional)">{(id) => <input id={id} className="input mono" value={c.gstin} onChange={(e) => { const g = e.target.value.toUpperCase(); setInv({ ...inv, interState: /^\d{2}/.test(g) ? g.slice(0, 2) !== db.tax.stateCode : inv.interState, customer: { ...c, gstin: g } }) }} />}</Field>
         <Field label="Email">{(id) => <input id={id} className="input" value={c.email} onChange={(e) => setInv({ ...inv, customer: { ...c, email: e.target.value } })} />}</Field>
         <div className="form-grid inner">
-          <Field label="Date" error={dateErr}>{(id) => <input id={id} type="date" className="input" max={toISODate(new Date())} value={inv.date} onChange={(e) => setInv({ ...inv, date: e.target.value })} />}</Field>
+          <Field label="Date" error={dateErr}>{(id) => <input id={id} type="date" className="input" max={toISODate(new Date(now))} value={inv.date} onChange={(e) => setInv({ ...inv, date: e.target.value })} />}</Field>
           <Field label="Due">{(id) => <input id={id} type="date" className="input" min={inv.date} value={inv.dueDate} onChange={(e) => setInv({ ...inv, dueDate: e.target.value })} />}</Field>
         </div>
         <label className="checkbox span-2"><input type="checkbox" checked={inv.interState} onChange={(e) => setInv({ ...inv, interState: e.target.checked })} /> Inter-state (IGST)</label>

@@ -75,7 +75,8 @@ export default function Students() {
     const tpl = db.templates.find((t) => t.id === 'tpl-welcome')
     if (!tpl) return toast('Welcome template not found', 'error')
     const r = await sendBulkEmail({ recipients: [{ email: s.email, vars: { name: s.name, student_name: s.name } }], subject: tpl.subject, body: tpl.body })
-    r.sent ? toast(`Welcome email sent to ${s.email}`) : toast('Email failed – check Email settings', 'error')
+    if (r.sent) toast(`Welcome email sent to ${s.email}`)
+    else toast('Email failed – check Email settings', 'error')
   }
 
   const exportCsv = () =>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CreditCard, Smartphone, Landmark, Lock, CheckCircle2, Receipt } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
+import { useNow } from '../../lib/useNow'
 import { Badge, Button, Card, Empty, Field, Modal, PageHeader, Segmented } from '../../components/ui'
 import { ReceiptModal, PAYMENT_METHOD_LABEL } from '../../components/Receipt'
 import { formatDate, formatMoney, newReceiptNo, studentFeeStatus, uid, type FeeStatus } from '../../lib/utils'
@@ -107,8 +108,8 @@ function Checkout({ item, onClose, onPaid }: { item: FeeStatus; onClose: () => v
 
   const digits = card.number.replace(/\D/g, '')
   const [mm, yy] = card.exp.split('/').map((x) => +x)
-  const now = new Date()
-  const expOk = mm >= 1 && mm <= 12 && yy >= 0 && new Date(2000 + yy, mm, 0) >= new Date(now.getFullYear(), now.getMonth(), 1)
+  const nowD = new Date(useNow())
+  const expOk = mm >= 1 && mm <= 12 && yy >= 0 && new Date(2000 + yy, mm, 0) >= new Date(nowD.getFullYear(), nowD.getMonth(), 1)
   const error =
     method === 'upi' ? (!/^[\w.-]{2,}@[a-z]{2,}$/i.test(vpa.trim()) ? 'Enter a valid UPI ID, e.g. name@okbank' : null)
     : method === 'card' ? (!luhn(digits) ? 'Card number is invalid' : !card.name.trim() ? 'Name on card is required' : !expOk ? 'Expiry must be a future MM/YY' : !/^\d{3,4}$/.test(card.cvv) ? 'CVV must be 3–4 digits' : null)

@@ -1,4 +1,5 @@
 import { useStore } from '../../store/AppStore'
+import { useNow } from '../../lib/useNow'
 import { DAYS, weekdayIndex } from '../../lib/utils'
 import type { TimetableSlot } from '../../types'
 
@@ -24,7 +25,7 @@ export default function TimetableGrid({
   days?: number
 }) {
   const { db } = useStore()
-  const today = weekdayIndex(new Date())
+  const today = weekdayIndex(new Date(useNow()))
   const periods = [...db.periods].sort((a, b) => a.no - b.no)
   return (
     <div className="tt-wrap">

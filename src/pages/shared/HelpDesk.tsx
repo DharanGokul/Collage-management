@@ -39,6 +39,7 @@ export default function HelpDesk() {
   useEffect(() => {
     const n = params.get('new')
     if (n === 'query' || n === 'complaint') {
+      // oxlint-disable-next-line react/set-state-in-effect -- one-shot sync of the ?new= URL param into local UI state, then the param is cleared
       setComposeKind(n)
       params.delete('new')
       setParams(params, { replace: true })

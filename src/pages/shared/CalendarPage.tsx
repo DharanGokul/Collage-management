@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, CalendarX, Flag } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
+import { useNow } from '../../lib/useNow'
 import { Button, Card, Empty, Segmented } from '../../components/ui'
 import { gsap, prefersReducedMotion } from '../../components/motion'
 import { useIsMobile } from '../../lib/useMedia'
@@ -20,6 +21,7 @@ export default function CalendarPage() {
   const go = useNavigate()
   const [params, setParams] = useSearchParams()
   const mobile = useIsMobile()
+  const now = useNow()
   const isAdmin = session?.role === 'admin'
   const [view, setView] = useState<View>('week')
   const [anchor, setAnchor] = useState(() => new Date())
@@ -71,12 +73,12 @@ export default function CalendarPage() {
   // This-week KPIs
   const kpi = useMemo(() => {
     if (!session) return { events: 0, exams: 0, open: 0, free: 0 }
-    const s = startOfWeek(new Date())
+    const s = startOfWeek(new Date(now))
     const wk = agenda(db, session, s, addDays(s, 7), { includeFees: false })
     const busy = new Set(wk.flatMap((i) => Array.from({ length: 7 }, (_, d) => addDays(s, d)).filter((d) => overlapsDay(i, d)).map(toISODate)))
-    const open = db.events.filter((e) => e.registration.enabled && eventRange(e).start > new Date() && (isAdmin || canRegister(db, session, e).ok)).length
+    const open = db.events.filter((e) => e.registration.enabled && eventRange(e).start > new Date(now) && (isAdmin || canRegister(db, session, e).ok)).length
     return { events: wk.filter((i) => i.kind !== 'exam').length, exams: wk.filter((i) => i.kind === 'exam').length, open, free: 7 - busy.size }
-  }, [db, session, isAdmin])
+  }, [db, session, isAdmin, now])
 
   const step = (dir: number) => {
     const d = new Date(anchor)
@@ -314,6 +316,7 @@ function WeekGrid({ from, items, onItem, onDay }: { from: Date; items: AgendaIte
 
 function MobileWeek({ from, items, sel, setSel, onItem }: { from: Date; items: AgendaItem[]; sel: Date; setSel: (d: Date) => void; onItem: (i: AgendaItem) => void }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(from, i))
+  const now = useNow()
   const selected = days.find((d) => sameDay(d, sel)) ?? days[0]
   return (
     <div className="stack" style={{ padding: '0 16px 16px' }}>
@@ -321,7 +324,7 @@ function MobileWeek({ from, items, sel, setSel, onItem }: { from: Date; items: A
         {days.map((d) => {
           const di = items.filter((i) => overlapsDay(i, d))
           return (
-            <button key={d.toISOString()} role="tab" aria-selected={sameDay(d, selected)} className={`strip-day ${sameDay(d, selected) ? 'active' : ''} ${sameDay(d, new Date()) ? 'is-today' : ''}`} onClick={() => setSel(d)}>
+            <button key={d.toISOString()} role="tab" aria-selected={sameDay(d, selected)} className={`strip-day ${sameDay(d, selected) ? 'active' : ''} ${sameDay(d, new Date(now)) ? 'is-today' : ''}`} onClick={() => setSel(d)}>
               <small>{DAYS[(d.getDay() + 6) % 7].slice(0, 2)}</small>
               <strong>{d.getDate()}</strong>
               <span className="strip-dots">{di.slice(0, 3).map((i) => <i key={i.id} style={kindStyle(i.kind)} />)}</span>
@@ -335,8 +338,9 @@ function MobileWeek({ from, items, sel, setSel, onItem }: { from: Date; items: A
 }
 
 function DayAgenda({ day, items, onItem, bare }: { day: Date; items: AgendaItem[]; onItem: (i: AgendaItem) => void; bare?: boolean }) {
+  const now = useNow()
   const list = items.filter((i) => overlapsDay(i, day))
-  const isToday = sameDay(day, new Date())
+  const isToday = sameDay(day, new Date(now))
   return (
     <div className="stack-s" style={bare ? undefined : { padding: 16 }}>
       <div>
@@ -360,6 +364,7 @@ function DayAgenda({ day, items, onItem, bare }: { day: Date; items: AgendaItem[
 /* ---------------- month ---------------- */
 
 function MonthGrid({ anchor, from, items, compact, sel, onDay, onItem }: { anchor: Date; from: Date; items: AgendaItem[]; compact: boolean; sel: Date; onDay: (d: Date) => void; onItem: (i: AgendaItem) => void }) {
+  const now = useNow()
   const days = Array.from({ length: 42 }, (_, i) => addDays(from, i))
   return (
     <div className="month">
@@ -374,7 +379,7 @@ function MonthGrid({ anchor, from, items, compact, sel, onDay, onItem }: { ancho
             key={d.toISOString()}
             role="button"
             tabIndex={0}
-            className={`month-cell ${out ? 'out' : ''} ${sameDay(d, new Date()) ? 'today' : ''}`}
+            className={`month-cell ${out ? 'out' : ''} ${sameDay(d, new Date(now)) ? 'today' : ''}`}
             style={compact ? { minHeight: 58, outline: sameDay(d, sel) ? '2px solid var(--ink)' : undefined, outlineOffset: -2 } : undefined}
             onClick={() => onDay(d)}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onDay(d)}
@@ -412,9 +417,10 @@ function MonthGrid({ anchor, from, items, compact, sel, onDay, onItem }: { ancho
 /* ---------------- list ---------------- */
 
 function ListView({ items, onItem }: { items: AgendaItem[]; onItem: (i: AgendaItem) => void }) {
+  const now = useNow()
   const groups = new Map<string, AgendaItem[]>()
   for (const i of items.filter((x) => x.kind !== 'class' || items.length < 60)) {
-    const k = toISODate(i.start < new Date(new Date().setHours(0, 0, 0, 0)) && i.allDay ? new Date() : i.start)
+    const k = toISODate(i.start < new Date(new Date(now).setHours(0, 0, 0, 0)) && i.allDay ? new Date(now) : i.start)
     groups.set(k, [...(groups.get(k) ?? []), i])
   }
   if (!groups.size) return <Empty icon={<CalendarX />} title="Nothing scheduled" />
@@ -442,12 +448,19 @@ function ListView({ items, onItem }: { items: AgendaItem[]; onItem: (i: AgendaIt
 /* ---------------- side panels ---------------- */
 
 function MiniMonth({ anchor, items, weekStart, onPick }: { anchor: Date; items: AgendaItem[]; weekStart: Date | null; onPick: (d: Date) => void }) {
+  const now = useNow()
   const [m, setM] = useState(() => new Date(anchor.getFullYear(), anchor.getMonth(), 1))
-  useEffect(() => setM(new Date(anchor.getFullYear(), anchor.getMonth(), 1)), [anchor])
+  // Follow the anchor when it changes (adjusting state during render rather than in an effect).
+  const [prevAnchor, setPrevAnchor] = useState(anchor)
+  if (prevAnchor !== anchor) {
+    setPrevAnchor(anchor)
+    setM(new Date(anchor.getFullYear(), anchor.getMonth(), 1))
+  }
   const { db, session } = useStore()
   const start = startOfWeek(m)
   const days = Array.from({ length: 42 }, (_, i) => addDays(start, i))
-  const monthItems = useMemo(() => (session ? agenda(db, session, start, addDays(start, 42), { includeFees: true }) : items), [db, session, start.getTime()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const startMs = start.getTime()
+  const monthItems = useMemo(() => (session ? agenda(db, session, start, addDays(start, 42), { includeFees: true }) : items), [db, session, startMs]) // eslint-disable-line react-hooks/exhaustive-deps
   const busy = new Set(monthItems.flatMap((i) => days.filter((d) => overlapsDay(i, d)).map(toISODate)))
   return (
     <Card pad={false}>
@@ -464,7 +477,7 @@ function MiniMonth({ anchor, items, weekStart, onPick }: { anchor: Date; items: 
           {days.map((d) => {
             const inWeek = weekStart && d >= weekStart && d < addDays(weekStart, 7)
             return (
-              <button key={d.toISOString()} className={`mini-day ${d.getMonth() !== m.getMonth() ? 'out' : ''} ${inWeek ? 'inweek' : ''} ${sameDay(d, new Date()) ? 'today' : ''}`} onClick={() => onPick(d)} aria-label={d.toDateString()}>
+              <button key={d.toISOString()} className={`mini-day ${d.getMonth() !== m.getMonth() ? 'out' : ''} ${inWeek ? 'inweek' : ''} ${sameDay(d, new Date(now)) ? 'today' : ''}`} onClick={() => onPick(d)} aria-label={d.toDateString()}>
                 {d.getDate()}
                 {busy.has(toISODate(d)) && <i />}
               </button>
@@ -479,9 +492,10 @@ function MiniMonth({ anchor, items, weekStart, onPick }: { anchor: Date; items: 
 function OpenRegistrations({ onOpen }: { onOpen: (id: string) => void }) {
   const { db, session } = useStore()
   const { register } = useRegistration()
+  const now = useNow()
   if (!session) return null
   const list = db.events
-    .filter((e) => e.registration.enabled && eventRange(e).start > new Date() && (session.role === 'admin' || canRegister(db, session, e).ok || myRegistration(e, session)))
+    .filter((e) => e.registration.enabled && eventRange(e).start > new Date(now) && (session.role === 'admin' || canRegister(db, session, e).ok || myRegistration(e, session)))
     .sort((a, b) => a.start.localeCompare(b.start))
     .slice(0, 5)
   return (

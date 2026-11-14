@@ -20,6 +20,7 @@ export default function Bank() {
 
   useEffect(() => {
     if (params.get('import')) {
+      // oxlint-disable-next-line react/set-state-in-effect -- one-shot: consumes a URL query param (external router state) into local state, then clears it
       setImporting(true)
       params.delete('import')
       setParams(params, { replace: true })
@@ -34,12 +35,12 @@ export default function Bank() {
     return accountBalance(db, acc, toISODate(prev)) // local date: toISOString() shifts a day back east of UTC (IST)
   }, [db, acc, from])
   const lines = useMemo(() => {
-    let bal = opening
-    return db.bankTxns
+    const sorted = db.bankTxns
       .filter((t) => t.accountId === acc && inPeriod(t.date, period))
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
-      .map((t) => ((bal += t.credit - t.debit), { ...t, balance: bal }))
-      .reverse() // newest first, like net banking; balances computed in date order above
+    const out: (typeof sorted[number] & { balance: number })[] = []
+    for (const t of sorted) out.push({ ...t, balance: (out.length ? out[out.length - 1].balance : opening) + t.credit - t.debit })
+    return out.reverse() // newest first, like net banking; balances computed in date order above
   }, [db.bankTxns, acc, period, opening])
   const shown = lines.filter((l) => (show === 'all' || !l.match) && (!q.trim() || `${l.description} ${l.ref}`.toLowerCase().includes(q.trim().toLowerCase())))
   const paged = usePaged(shown, 30)

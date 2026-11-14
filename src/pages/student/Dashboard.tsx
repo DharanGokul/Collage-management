@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CalendarCheck, Wallet, FileText, PartyPopper, MessageSquareText, Receipt, AlertTriangle, Clock, Megaphone } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
+import { useNow } from '../../lib/useNow'
 import { Badge, Button, Card, Empty } from '../../components/ui'
 import { Donut } from '../../components/charts'
 import { ComingUp, Greeting, NeedsYou, UpNext, WeekAhead, type Need } from '../../components/dash'
@@ -16,13 +17,16 @@ export default function StudentDashboard() {
   const { register } = useRegistration()
   const [viewing, setViewing] = useState<CampusEvent | null>(null)
   const me = db.students.find((s) => s.id === session?.userId)
-  const now = new Date()
-  const upcoming = useMemo(() => (session ? agenda(db, session, now, addDays(now, 30), { includeFees: false, includeClasses: true }).filter((i) => i.end > now) : []), [db, session]) // eslint-disable-line react-hooks/exhaustive-deps
+  const now = useNow()
+  const upcoming = useMemo(() => {
+    const n = new Date(now)
+    return session ? agenda(db, session, n, addDays(n, 30), { includeFees: false, includeClasses: true }).filter((i) => i.end > n) : []
+  }, [db, session, now])
   const week = useMemo(() => {
-    const s = new Date()
+    const s = new Date(now)
     s.setHours(0, 0, 0, 0)
     return session ? agenda(db, session, s, addDays(s, 7), { includeFees: true }) : []
-  }, [db, session])
+  }, [db, session, now])
   if (!me || !session) return <Empty title="Student record not found" />
 
   const cur = db.branding.currency
@@ -32,10 +36,10 @@ export default function StudentDashboard() {
   const dueTotal = due.reduce((a, f) => a + f.total, 0)
   const nextExam = upcoming.find((i) => i.kind === 'exam')
   const hero = upcoming.find((i) => i.kind !== 'class') ?? upcoming[0] ?? null
-  const myRegs = db.events.filter((e) => myRegistration(e, session) && eventRange(e).end > now)
+  const myRegs = db.events.filter((e) => myRegistration(e, session) && eventRange(e).end > new Date(now))
   const openEvents = db.events.filter((e) => e.registration.enabled && canRegister(db, session, e).ok && !myRegistration(e, session))
   const tickets = db.tickets.filter((t) => t.from.userId === me.id)
-  const todayClasses = db.timetable.filter((t) => t.classKey === key && t.day === weekdayIndex(now)).sort((a, b) => a.period - b.period)
+  const todayClasses = db.timetable.filter((t) => t.classKey === key && t.day === weekdayIndex(new Date(now))).sort((a, b) => a.period - b.period)
 
   const needs: Need[] = [
     ...due.map<Need>((f) => ({

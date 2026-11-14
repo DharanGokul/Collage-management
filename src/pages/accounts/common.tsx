@@ -4,11 +4,12 @@ import { useStore } from '../../store/AppStore'
 import { Button, Segmented } from '../../components/ui'
 import { GST_RATES, fyLabel, fyStartOf, lineTotals, type Period } from '../../lib/finance'
 import { formatMoney, toISODate } from '../../lib/utils'
+import { useNow } from '../../lib/useNow'
 import type { LineItem } from '../../types'
 
 /** Month / financial-year selector shared by every accounts screen. */
 export function usePeriod(initial: 'month' | 'fy' = 'month') {
-  const now = new Date()
+  const now = new Date(useNow())
   const [kind, setKind] = useState<'month' | 'fy'>(initial)
   const [month, setMonth] = useState(toISODate(now).slice(0, 7))
   const [fy, setFy] = useState(fyStartOf(now))

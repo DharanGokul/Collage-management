@@ -52,7 +52,7 @@ export function lineTotals(items: LineItem[], interState: boolean): Totals {
   for (const it of items) {
     const base = it.qty * it.rate
     taxable += base
-    gst += (base * it.gstRate) / 100
+    gst += it.gstAmount ?? (base * it.gstRate) / 100
   }
   taxable = r2(taxable)
   gst = r2(gst)
@@ -87,13 +87,12 @@ export const GST_RATES = [0, 5, 12, 18, 28]
 /* ------------------------------------------------------------------ */
 
 export function feeInvoiceItems(fee: FeeItem, gstRate: number): LineItem[] {
-  // Fee amounts are GST-inclusive: back out the taxable value.
-  // Pick the taxable value whose rounded GST adds back to exactly the fee amount (avoids 1-paisa drift).
-  let { taxable } = splitInclusive(fee.amount, gstRate)
-  for (const c of [taxable, r2(taxable - 0.01), r2(taxable + 0.01)]) {
-    if (r2(c + r2((c * gstRate) / 100)) === r2(fee.amount)) { taxable = c; break }
-  }
-  return [{ description: `${fee.name} (${fee.term})`, qty: 1, rate: taxable, gstRate }]
+  // Fee amounts are GST-inclusive, so the invoice total must equal the fee exactly. Taxable value and GST are both
+  // rounded to the paisa, and for some amounts no taxable value satisfies `taxable + round(taxable × rate) = fee`
+  // (at 18%, 4718 is only reachable as 4717.99 or 4718.01). So the tax is derived from the total and the taxable
+  // value is the remainder; the line carries the GST explicitly.
+  const gst = r2((fee.amount * gstRate) / (100 + gstRate))
+  return [{ description: `${fee.name} (${fee.term})`, qty: 1, rate: r2(fee.amount - gst), gstRate, gstAmount: gst }]
 }
 
 export function invoicePayment(db: Database, inv: Invoice): Payment | undefined {

@@ -5,6 +5,7 @@ import { notify, useStore } from '../../store/AppStore'
 import { Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, Stat, Tabs, usePaged } from '../../components/ui'
 import { LineItemsEditor, Money, ReportActions, TotalsBlock, money2, usePeriod } from './common'
 import { TDS_SECTIONS, billTotals, inPeriod, lineTotals, periodLabel } from '../../lib/finance'
+import { useNow, useToday } from '../../lib/useNow'
 import { downloadCSV, formatDate, toISODate, uid } from '../../lib/utils'
 import type { Bill, BillCategory, Vendor } from '../../types'
 
@@ -28,6 +29,7 @@ export default function Bills() {
     const req = params.get('request')
     if (params.get('new') || req) {
       const r = req ? db.requests.find((x) => x.id === req) : undefined
+      // oxlint-disable-next-line react/set-state-in-effect -- one-shot: consumes a URL query param (external router state) into local state, then clears it
       setEditing(blankBill(r ? { requestId: r.id, category: r.category === 'computer' || r.category === 'lab' || r.category === 'av' || r.category === 'projector' ? 'equipment' : 'maintenance', items: [{ description: r.title, qty: r.quantity, rate: Math.round(r.estimatedCost / Math.max(1, r.quantity)), gstRate: 18 }] } : {}))
       params.delete('new')
       params.delete('request')
@@ -46,7 +48,7 @@ export default function Bills() {
   const awaitingBill = db.requests.filter((r) => r.kind === 'purchase' && r.status === 'approved' && !r.billId)
 
   const sum = (f: (b: Bill) => boolean, k: 'payable' | 'total' | 'tds' = 'payable') => db.bills.filter(f).reduce((a, b) => a + billTotals(b)[k], 0)
-  const today = toISODate(new Date())
+  const today = useToday()
 
   return (
     <>
@@ -122,6 +124,7 @@ function blankBill(p: Partial<Bill> = {}): Bill {
 
 function BillForm({ initial, onClose }: { initial: Bill; onClose: () => void }) {
   const { db, session, update, toast } = useStore()
+  const now = useNow()
   const [b, setB] = useState<Bill>(initial)
   const [touched, setTouched] = useState(false)
   const [newVendor, setNewVendor] = useState<Vendor | null>(null)
@@ -132,7 +135,7 @@ function BillForm({ initial, onClose }: { initial: Bill; onClose: () => void }) 
     vendor: !b.vendorId && !newVendor?.name.trim() ? 'Choose or add a vendor' : null,
     billNo: !b.billNo.trim() ? 'Vendor’s bill / invoice number' : db.bills.some((x) => x.id !== b.id && x.vendorId === b.vendorId && x.billNo.toLowerCase() === b.billNo.trim().toLowerCase()) ? 'This bill number is already recorded for the vendor' : null,
     items: b.items.some((i) => !i.description.trim() || i.qty <= 0 || i.rate <= 0) ? 'Every line needs a description, quantity and rate' : null,
-    date: b.date > toISODate(new Date()) ? 'Bill date cannot be in the future' : !b.date ? 'Enter the bill date' : null,
+    date: b.date > toISODate(new Date(now)) ? 'Bill date cannot be in the future' : !b.date ? 'Enter the bill date' : null,
     due: b.dueDate && b.dueDate < b.date ? 'Due date is before the bill date' : null,
     gstin: newVendor && newVendor.gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/.test(newVendor.gstin) ? 'GSTIN format looks wrong' : null,
   }
@@ -189,7 +192,7 @@ function BillForm({ initial, onClose }: { initial: Bill; onClose: () => void }) 
         )}
         <Field label="Category">{(id) => <select id={id} className="input" value={b.category} onChange={(e) => set('category', e.target.value as BillCategory)}>{CATS.map((c) => <option key={c} value={c}>{c[0].toUpperCase() + c.slice(1)}</option>)}</select>}</Field>
         <div className="form-grid inner">
-          <Field label="Bill date" error={touched ? errors.date : null}>{(id) => <input id={id} type="date" className="input" value={b.date} max={toISODate(new Date())} onChange={(e) => set('date', e.target.value)} />}</Field>
+          <Field label="Bill date" error={touched ? errors.date : null}>{(id) => <input id={id} type="date" className="input" value={b.date} max={toISODate(new Date(now))} onChange={(e) => set('date', e.target.value)} />}</Field>
           <Field label="Due date" error={touched ? errors.due : null}>{(id) => <input id={id} type="date" className="input" value={b.dueDate} min={b.date} onChange={(e) => set('dueDate', e.target.value)} />}</Field>
         </div>
         <label className="checkbox span-2"><input type="checkbox" checked={b.interState} onChange={(e) => set('interState', e.target.checked)} /> Inter-state supply (IGST instead of CGST + SGST)</label>
@@ -216,14 +219,15 @@ function BillForm({ initial, onClose }: { initial: Bill; onClose: () => void }) 
 function PayBill({ bill, onClose }: { bill: Bill; onClose: () => void }) {
   const { db, session, update, toast } = useStore()
   const t = billTotals(bill)
+  const now = useNow()
   const [acc, setAcc] = useState(db.bankAccounts[0]?.id ?? '')
-  const [date, setDate] = useState(toISODate(new Date()))
+  const [date, setDate] = useState(toISODate(new Date(now)))
   const [ref, setRef] = useState('')
   const v = db.vendors.find((x) => x.id === bill.vendorId)
-  const dateErr = !date ? 'Enter the payment date' : date > toISODate(new Date()) ? 'Payment date cannot be in the future' : date < bill.date ? 'Payment date is before the bill date' : null
+  const dateErr = !date ? 'Enter the payment date' : date > toISODate(new Date(now)) ? 'Payment date cannot be in the future' : date < bill.date ? 'Payment date is before the bill date' : null
   const pay = () => {
     if (dateErr) return
-    const paymentRef = ref.trim() || `NEFT-${Date.now().toString(36).toUpperCase()}`
+    const paymentRef = ref.trim() || `NEFT-${now.toString(36).toUpperCase()}`
     update((d) => {
       const b = d.bills.find((x) => x.id === bill.id)
       if (!b) return
@@ -245,7 +249,7 @@ function PayBill({ bill, onClose }: { bill: Bill; onClose: () => void }) {
       <dl className="mini-dl"><dt>Bill total</dt><dd>{money2(t.total)}</dd>{t.tds > 0 && (<><dt>TDS withheld ({bill.tdsSection})</dt><dd>−{money2(t.tds)}</dd></>)}<dt>Amount to transfer</dt><dd><strong>{money2(t.payable)}</strong></dd></dl>
       <div className="form-grid">
         <Field label="From account">{(id) => <select id={id} className="input" value={acc} onChange={(e) => setAcc(e.target.value)}>{db.bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.bank} · {a.accountNo.slice(-4)}</option>)}</select>}</Field>
-        <Field label="Payment date" error={dateErr}>{(id) => <input id={id} type="date" className="input" value={date} min={bill.date} max={toISODate(new Date())} onChange={(e) => setDate(e.target.value)} />}</Field>
+        <Field label="Payment date" error={dateErr}>{(id) => <input id={id} type="date" className="input" value={date} min={bill.date} max={toISODate(new Date(now))} onChange={(e) => setDate(e.target.value)} />}</Field>
         <Field label="UTR / reference" span={2} hint="Leave empty to generate one">{(id) => <input id={id} className="input mono" value={ref} onChange={(e) => setRef(e.target.value)} />}</Field>
       </div>
     </Modal>

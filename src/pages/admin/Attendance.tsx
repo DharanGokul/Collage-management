@@ -4,6 +4,7 @@ import { useStore } from '../../store/AppStore'
 import { Badge, Button, Card, Empty, PageHeader, Progress, Tabs } from '../../components/ui'
 import AttendanceMarker from '../shared/AttendanceMarker'
 import { classKey, classLabel, downloadCSV, studentClassKey, summarize, toISODate } from '../../lib/utils'
+import { useNow } from '../../lib/useNow'
 
 type Tab = 'report' | 'low' | 'mark'
 
@@ -22,7 +23,7 @@ export default function AdminAttendance() {
 }
 
 function useRange() {
-  const today = new Date()
+  const today = new Date(useNow())
   const from = new Date(today)
   from.setDate(today.getDate() - 30)
   const [range, setRange] = useState({ from: toISODate(from), to: toISODate(today) })
@@ -126,7 +127,8 @@ function LowAttendance() {
     setSending(true)
     const r = await sendBulkEmail({ subject: tpl.subject, body: tpl.body, recipients: rows.map(({ s, sum }) => ({ email: s.email, vars: { name: s.name, student_name: s.name, attendance_pct: `${sum.pct}%` } })) })
     setSending(false)
-    r.failed ? toast(`${r.sent} sent, ${r.failed} failed`, r.sent ? 'info' : 'error') : toast(`Alert sent to ${r.sent} student(s)`)
+    if (r.failed) toast(`${r.sent} sent, ${r.failed} failed`, r.sent ? 'info' : 'error')
+    else toast(`Alert sent to ${r.sent} student(s)`)
   }
 
   return (

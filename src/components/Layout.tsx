@@ -14,6 +14,7 @@ import Toaster from './Toaster'
 import { prefetch, prefetchRole } from '../routes'
 import type { Database, Role, Session } from '../types'
 import { agenda, countdown, fmtTime } from '../lib/agenda'
+import { useNow } from '../lib/useNow'
 import { hodDepartment, isHod, photoOf, unreadCount } from '../lib/workflow'
 
 /* ------------------------------------------------------------------ */
@@ -201,6 +202,7 @@ function CreateMenu({ actions, onPick }: { actions: CreateAction[]; onPick: (to:
 interface Notice { id: string; title: string; sub: string; to: string; icon: ReactNode }
 
 function useNotices(db: Database, s: Session): Notice[] {
+  const nowMs = useNow()
   return useMemo(() => {
     const out: Notice[] = []
     // Stored realtime notifications for me (newest first)
@@ -213,13 +215,13 @@ function useNotices(db: Database, s: Session): Notice[] {
     } else {
       for (const t of db.tickets.filter((x) => x.from.userId === s.userId && x.unreadByRequester))
         out.push({ id: t.id, title: `Reply: ${t.subject}`, sub: `${t.ref} · ${t.status.replace('_', ' ')}`, to: `/${s.role}/queries?t=${t.id}`, icon: <MessageSquareText size={16} /> })
-      const now = new Date()
+      const now = new Date(nowMs)
       const soon = agenda(db, s, now, new Date(now.getTime() + 3 * 86400000), { includeFees: s.role === 'student' }).filter((i) => i.kind !== 'class')
       for (const i of soon.slice(0, 5))
         out.push({ id: i.id, title: i.title, sub: i.allDay ? `${i.start.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}` : `In ${countdown(i.start)} · ${fmtTime(i.start)}`, to: `/${s.role}/calendar`, icon: <CalendarRange size={16} /> })
     }
     return out
-  }, [db, s])
+  }, [db, s, nowMs])
 }
 
 /* ------------------------------------------------------------------ */
@@ -409,11 +411,15 @@ export default function Layout() {
   useDismiss(createOpen, closeCreate, createRef)
   useDismiss(bellOpen, closeBell, bellRef)
 
-  useEffect(() => {
+  // Close menus/sheets on navigation (adjusted during render rather than in an effect).
+  const locKey = loc.pathname + loc.search
+  const [prevLocKey, setPrevLocKey] = useState(locKey)
+  if (prevLocKey !== locKey) {
+    setPrevLocKey(locKey)
     setSheet(null)
     setCreateOpen(false)
     setBellOpen(false)
-  }, [loc.pathname, loc.search])
+  }
 
   useEffect(() => {
     if (session) prefetchRole(session.role)

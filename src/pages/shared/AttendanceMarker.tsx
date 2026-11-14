@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CheckCheck, Save, Users, CalendarX } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
+import { useToday } from '../../lib/useNow'
 import { Avatar, Badge, Button, Card, Empty, Field } from '../../components/ui'
-import { classKey, classLabel, toISODate, weekdayIndex } from '../../lib/utils'
+import { classKey, classLabel, weekdayIndex } from '../../lib/utils'
 import type { AttendanceMark, Subject } from '../../types'
 
 const MARKS: { id: AttendanceMark; label: string }[] = [
@@ -17,7 +18,8 @@ const MARKS: { id: AttendanceMark; label: string }[] = [
  */
 export default function AttendanceMarker({ subjects, markedBy }: { subjects: Subject[]; markedBy: string }) {
   const { db, update, toast } = useStore()
-  const [date, setDate] = useState(toISODate(new Date()))
+  const today = useToday()
+  const [date, setDate] = useState(today)
   const day = weekdayIndex(new Date(date + 'T00:00:00'))
   const subjectIds = useMemo(() => new Set(subjects.map((s) => s.id)), [subjects])
 
@@ -31,10 +33,9 @@ export default function AttendanceMarker({ subjects, markedBy }: { subjects: Sub
   // Manual selection (extra/rescheduled class not on the timetable)
   const [manual, setManual] = useState({ subjectId: subjects[0]?.id ?? '', section: db.sections[0] ?? 'A', period: 1 })
 
-  useEffect(() => {
-    // Keep the current choice when the slot list is merely rebuilt (e.g. after saving).
-    setSlotKey((prev) => (prev === 'manual' || slots.some((s) => s.id === prev) ? prev : (slots[0]?.id ?? 'manual')))
-  }, [slots])
+  // Keep the current choice when the slot list is merely rebuilt (e.g. after saving); otherwise fall back to the first slot.
+  const validSlotKey = slotKey === 'manual' || slots.some((s) => s.id === slotKey) ? slotKey : (slots[0]?.id ?? 'manual')
+  if (validSlotKey !== slotKey) setSlotKey(validSlotKey)
 
   const target = useMemo(() => {
     if (slotKey !== 'manual') {
@@ -55,15 +56,18 @@ export default function AttendanceMarker({ subjects, markedBy }: { subjects: Sub
   const existing = target ? db.attendance.find((a) => a.date === date && a.classKey === target.classKey && a.period === target.period) : undefined
   const [marks, setMarks] = useState<Record<string, AttendanceMark>>({})
 
-  useEffect(() => {
+  // Re-initialise the marks only when the target session changes.
+  const marksKey = `${existing?.id}|${target?.classKey}|${target?.period}|${date}|${roster.length}`
+  const [marksFor, setMarksFor] = useState<string | null>(null)
+  if (marksFor !== marksKey) {
     const init: Record<string, AttendanceMark> = {}
     for (const st of roster) init[st.id] = existing?.marks[st.id] ?? 'P'
+    setMarksFor(marksKey)
     setMarks(init)
-    // re-initialise only when the target session changes
-  }, [existing?.id, target?.classKey, target?.period, date, roster.length])
+  }
 
   const counts = Object.values(marks).reduce((acc, m) => ((acc[m] = (acc[m] ?? 0) + 1), acc), {} as Record<AttendanceMark, number>)
-  const isFuture = date > toISODate(new Date())
+  const isFuture = date > today
   const conflict = existing && target && existing.subjectId !== target.subjectId ? db.subjects.find((s) => s.id === existing.subjectId) : undefined
 
   const save = () => {
@@ -84,7 +88,7 @@ export default function AttendanceMarker({ subjects, markedBy }: { subjects: Sub
     <div className="grid side">
       <Card title="Class & period">
         <div className="stack">
-          <Field label="Date">{(id) => <input id={id} type="date" className="input" value={date} max={toISODate(new Date())} onChange={(e) => e.target.value && setDate(e.target.value)} />}</Field>
+          <Field label="Date">{(id) => <input id={id} type="date" className="input" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} />}</Field>
           {slots.length > 0 ? (
             <div className="slot-list" role="radiogroup" aria-label="Scheduled classes">
               {slots.map((s) => {

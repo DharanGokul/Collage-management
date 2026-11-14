@@ -281,7 +281,8 @@ function DomainTab() {
     const at = new Date().toISOString()
     update((x) => { x.domain.domainStatus = status; x.domain.lastCheckedAt = at })
     setD((p) => ({ ...p, domainStatus: status, lastCheckedAt: at }))
-    res.ok ? toast(`${saved} is verified and live`) : toast('Some DNS records are missing. Changes can take up to 48 hours.', 'error')
+    if (res.ok) toast(`${saved} is verified and live`)
+    else toast('Some DNS records are missing. Changes can take up to 48 hours.', 'error')
   }
 
   const live = portalUrl(db.domain.subdomain, db.domain.customDomain, verified)

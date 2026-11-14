@@ -11,6 +11,7 @@ import { ComingUp, Greeting, NeedsYou, Pulse, UpNext, WeekAhead, type Need } fro
 import { EventDetail } from '../shared/eventsUi'
 import { addDays, agenda, eventRange, registeredCount, type AgendaItem } from '../../lib/agenda'
 import { classLabel, formatDate, formatMoney, studentFeeStatus, summarize, uid } from '../../lib/utils'
+import { useNow } from '../../lib/useNow'
 import type { Announcement, CampusEvent } from '../../types'
 
 const ago = (iso: string) => {
@@ -30,19 +31,21 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (params.get('announce')) {
+      // oxlint-disable-next-line react/set-state-in-effect -- one-shot: consumes a URL query param (external router state) into local state, then clears it
       setAnnOpen(true)
       params.delete('announce')
       setParams(params, { replace: true })
     }
   }, [params, setParams])
 
-  const now = new Date()
-  const upcoming = useMemo(() => (session ? agenda(db, session, now, addDays(now, 30), { includeFees: false }).filter((i) => i.end > now) : []), [db, session]) // eslint-disable-line react-hooks/exhaustive-deps
+  const nowMs = useNow()
+  const now = useMemo(() => new Date(nowMs), [nowMs])
+  const upcoming = useMemo(() => (session ? agenda(db, session, now, addDays(now, 30), { includeFees: false }).filter((i) => i.end > now) : []), [db, session, now])
   const week = useMemo(() => {
-    const s = new Date()
+    const s = new Date(nowMs)
     s.setHours(0, 0, 0, 0)
     return session ? agenda(db, session, s, addDays(s, 7), { includeFees: true }) : []
-  }, [db, session])
+  }, [db, session, nowMs])
 
   const stats = useMemo(() => {
     let billed = 0, collected = 0, defaulters = 0
@@ -116,8 +119,8 @@ export default function AdminDashboard() {
     for (const m of db.emailLog.slice(0, 2)) out.push({ at: m.sentAt, who: m.sentBy, text: `emailed ${m.to[0]}`, icon: <Mail size={13} /> })
     const marked = [...db.attendance].sort((a, b) => b.date.localeCompare(a.date) || b.period - a.period).slice(0, 2)
     for (const a of marked) out.push({ at: `${a.date}T${db.periods.find((p) => p.no === a.period)?.end ?? '17:00'}:00`, who: db.staff.find((s) => s.id === a.markedBy)?.name ?? 'Admin', text: `marked attendance for ${classLabel(a.classKey)} · P${a.period}`, icon: <ClipboardCheck size={13} /> })
-    return out.filter((x) => new Date(x.at) <= new Date()).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 7)
-  }, [db, cur])
+    return out.filter((x) => new Date(x.at) <= now).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 7)
+  }, [db, cur, now])
 
   const statusCounts = (['open', 'in_progress', 'resolved', 'closed'] as const).map((s) => db.tickets.filter((t) => t.status === s).length)
   const totalT = Math.max(1, statusCounts.reduce((a, b) => a + b, 0))

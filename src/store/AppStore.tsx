@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { AppNotification, Database, EmailLog, Session } from '../types'
 import { createSeed } from '../lib/seed'
 import { seedEvents, seedTickets } from '../lib/seedCampus'
@@ -112,7 +112,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [storageError, setStorageError] = useState<string | null>(null)
   const dbRef = useRef(db)
-  dbRef.current = db
+  useLayoutEffect(() => {
+    dbRef.current = db
+  }, [db])
 
   // Last JSON we wrote or received: lets us skip echoing a remote change back (no ping-pong between tabs).
   const lastJson = useRef<string | null>(null)
@@ -126,6 +128,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(dbKey(tenant.id), json)
         lastJson.current = json
       }
+      // oxlint-disable-next-line react/set-state-in-effect -- clears the error after a successful write to localStorage (external system)
       setStorageError(null)
     } catch {
       setStorageError('Browser storage is full or blocked – recent changes may not be saved. Try a smaller logo.')
@@ -191,11 +194,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [tenant.id],
   )
 
+  const sessionAid = session?.aid
   const logout = useCallback(() => {
-    if (session?.aid) recordSignOut(tenant.id, session.aid)
+    if (sessionAid) recordSignOut(tenant.id, sessionAid)
     clearSession(tenant.id)
     setSession(null)
-  }, [tenant.id, session?.aid])
+  }, [tenant.id, sessionAid])
 
   // End the session when it expires, without waiting for a click.
   useEffect(() => {

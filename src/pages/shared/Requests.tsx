@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Wrench, CalendarRange, CheckCheck, Send } from 'lucide-react'
 import { notify, useStore } from '../../store/AppStore'
+import { useNow } from '../../lib/useNow'
 import { Badge, Button, Empty, Field, Modal, PageHeader, Segmented, Stat, Tabs } from '../../components/ui'
 import { RequestCard, CATEGORY_LABEL, KIND_LABEL } from './requestsUi'
 import { formatDate, formatMoney, toISODate, uid } from '../../lib/utils'
@@ -19,6 +20,7 @@ export default function Requests() {
   const [applying, setApplying] = useState(false)
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- syncs the ?tab=/?new= URL params into local UI state, then clears ?new=
     if (params.get('tab') === 'leave') setTab('leave')
     const n = params.get('new')
     if (!n) return
@@ -187,8 +189,9 @@ function NewRequest({ kind: initial, onClose }: { kind: DeptRequest['kind']; onC
 function ApplyLeave({ onClose }: { onClose: () => void }) {
   const { db, session, update, toast } = useStore()
   const me = db.staff.find((s) => s.id === session?.userId)
+  const now = useNow()
   // Next working day (Sundays are not counted, so don't default to one).
-  const tomorrow = toISODate(new Date(Date.now() + 86400000 * (new Date(Date.now() + 86400000).getDay() === 0 ? 2 : 1)))
+  const tomorrow = toISODate(new Date(now + 86400000 * (new Date(now + 86400000).getDay() === 0 ? 2 : 1)))
   const [type, setType] = useState<LeaveRequest['type']>('casual')
   const [from, setFrom] = useState(tomorrow)
   const [to, setTo] = useState(tomorrow)

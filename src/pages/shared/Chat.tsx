@@ -31,6 +31,7 @@ export default function ChatPage() {
   useEffect(() => {
     const n = params.get('new')
     if (n === 'direct' || n === 'group') {
+      // oxlint-disable-next-line react/set-state-in-effect -- one-shot sync of the ?new= URL param into local UI state, then the param is cleared
       setCreating(n)
       params.delete('new')
       setParams(params, { replace: true })

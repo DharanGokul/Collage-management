@@ -4,6 +4,7 @@ import { ArrowUpRight, Clock, MapPin, Users, ChevronDown, CalendarRange } from '
 import { useStore } from '../store/AppStore'
 import { Card, Empty } from './ui'
 import { KIND_CODE, KIND_LABEL, addDays, countdown, fmtTime, overlapsDay, registeredCount, sameDay, type AgendaItem } from '../lib/agenda'
+import { useNow } from '../lib/useNow'
 import { kindStyle } from '../pages/shared/eventsUi'
 
 export function greeting(d = new Date()) {
@@ -51,10 +52,11 @@ function useTick(ms = 30000) {
 
 export function UpNext({ item, onOpen, footer }: { item: AgendaItem | null; onOpen: (i: AgendaItem) => void; footer?: ReactNode }) {
   useTick()
+  const now = useNow()
   const { db } = useStore()
   if (!item) return <Empty icon={<CalendarRange />} title="Nothing coming up">Your calendar is clear.</Empty>
   const ev = item.eventId ? db.events.find((e) => e.id === item.eventId) : undefined
-  const started = item.start <= new Date()
+  const started = item.start <= new Date(now)
   return (
     <div className="upnext" style={kindStyle(item.kind)}>
       <div className="upnext-art" aria-hidden>
@@ -84,6 +86,7 @@ export function UpNext({ item, onOpen, footer }: { item: AgendaItem | null; onOp
 }
 
 export function ComingUp({ items, onOpen }: { items: AgendaItem[]; onOpen: (i: AgendaItem) => void }) {
+  const now = useNow()
   if (!items.length) return null
   return (
     <>
@@ -95,7 +98,7 @@ export function ComingUp({ items, onOpen }: { items: AgendaItem[]; onOpen: (i: A
             <span className="coming-main">
               <strong>{i.title}</strong>
               <small>
-                {sameDay(i.start, new Date()) ? 'Today' : sameDay(i.start, addDays(new Date(), 1)) ? 'Tomorrow' : i.start.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                {sameDay(i.start, new Date(now)) ? 'Today' : sameDay(i.start, addDays(new Date(now), 1)) ? 'Tomorrow' : i.start.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
                 {i.allDay ? '' : ` · ${fmtTime(i.start)}`}
               </small>
             </span>
@@ -148,7 +151,8 @@ export function NeedsYou({ items, empty = 'You’re all caught up.' }: { items: 
 
 export function WeekAhead({ items, calendarTo, footer }: { items: AgendaItem[]; calendarTo: string; footer?: (d: Date, list: AgendaItem[]) => string }) {
   const go = useNavigate()
-  const start = new Date()
+  const now = useNow()
+  const start = new Date(now)
   start.setHours(0, 0, 0, 0)
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i))
   return (

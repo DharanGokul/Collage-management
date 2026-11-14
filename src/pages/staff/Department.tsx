@@ -1,21 +1,23 @@
 import { Link } from 'react-router-dom'
+import { useNow, useToday } from '../../lib/useNow'
 import { Users, GraduationCap, CalendarCheck, ClipboardCheck, Wrench, Plane } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
 import { Avatar, Badge, Card, Empty, PageHeader, Progress, Stat } from '../../components/ui'
 import { Pulse } from '../../components/dash'
 import { RequestCard } from '../shared/requestsUi'
-import { classLabel, studentClassKey, toISODate, weekdayIndex } from '../../lib/utils'
+import { classLabel, studentClassKey, weekdayIndex } from '../../lib/utils'
 import { canDecide, canDecideLeave, hodDepartment } from '../../lib/workflow'
 
 /** HOD view of their department: people, today's teaching, attendance and requests. */
 export default function Department() {
   const { db, session } = useStore()
+  const now = useNow()
+  const today = useToday()
   const dept = hodDepartment(db, session?.userId)
   if (!session || !dept) return <Empty title="Only heads of department can see this page" />
   const staff = db.staff.filter((s) => s.department === dept.code)
   const students = db.students.filter((s) => s.department === dept.code && s.status === 'active')
-  const today = toISODate(new Date())
-  const day = weekdayIndex(new Date())
+  const day = weekdayIndex(new Date(now))
   const classes = [...new Set(students.map(studentClassKey))].sort()
 
   const pct = (pred: (k: string) => boolean) => {

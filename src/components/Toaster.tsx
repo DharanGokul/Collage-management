@@ -66,7 +66,7 @@ export default function Toaster() {
   const [queue, setQueue] = useState<Item[]>([])
   const [shown, setShown] = useState<Item[]>([])
   const seen = useRef<Set<string>>(new Set())
-  const mountedAt = useRef(new Date().toISOString())
+  const mountedAt = useRef('') // set on mount by the effect below
   const dismissed = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -98,8 +98,9 @@ export default function Toaster() {
   useEffect(() => {
     if (!queue.length || shown.length < MAX_VISIBLE) return
     const oldest = shown.find((x) => !x.important && !expire.has(x.id))
+    // oxlint-disable-next-line react/set-state-in-effect -- sequenced reaction to queue/shown changes; no event to hang it on
     if (oldest) setExpire((e) => new Set(e).add(oldest.id))
-  }, [queue.length, shown, expire])
+  }, [queue.length, shown, expire, MAX_VISIBLE])
 
   // Release queued toasts one by one so they arrive back to back, not all at once.
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function Toaster() {
       setShown((s) => (s.some((x) => x.id === queue[0].id) ? s : [...s, queue[0]]))
     }, shown.length ? STAGGER_MS : 0)
     return () => clearTimeout(t)
-  }, [queue, shown.length])
+  }, [queue, shown.length, MAX_VISIBLE])
 
   const remove = (it: Item) => {
     if (it.tone === 'notify' && me) {

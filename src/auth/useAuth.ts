@@ -29,7 +29,7 @@ function buildDirectory(db: Database, tenantId: string): Directory {
     find(role, identifier) {
       const id = lc(identifier)
       if (!id) return null
-      if (role === 'admin') return id === lc(adminEmail) || id === lc(db.adminProfile.email) ? admin : null
+      if (role === 'admin') return id === lc(adminEmail) ? admin : null // the registry's admin email is authoritative; the seed profile address must not work in a provisioned college
       if (role === 'staff') {
         const s = db.staff.find((x) => lc(x.email) === id || lc(x.empId) === id)
         return s ? staff(s) : null

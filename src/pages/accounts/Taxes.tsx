@@ -5,6 +5,7 @@ import { Badge, Button, Card, Field, Modal, PageHeader, Stat, Tabs } from '../..
 import { ReportActions, money2, usePeriod } from './common'
 import { TDS_SECTIONS, billTotals, lineTotals, fyMonths, fyStartOf, gstSummary, inPeriod, periodLabel, tdsBySection, tdsDueDate, type Period } from '../../lib/finance'
 import { downloadCSV, formatDate, toISODate, uid } from '../../lib/utils'
+import { useNow, useToday } from '../../lib/useNow'
 import type { FeeItem, TaxSettings } from '../../types'
 
 type Tab = 'gst' | 'tds' | 'settings'
@@ -89,7 +90,7 @@ function Tds({ period }: { period: Period }) {
   const total = rows.reduce((a, r) => a + r.amount, 0)
   const deposited = rows.reduce((a, r) => a + r.deposited, 0)
   const deductions = useMemo(() => db.bills.filter((b) => b.tdsSection && b.status !== 'cancelled' && inPeriod(b.date, period)).sort((a, b) => b.date.localeCompare(a.date)), [db.bills, period])
-  const today = toISODate(new Date())
+  const today = useToday()
   const overdue = deductions.filter((b) => tdsDueDate(b.date.slice(0, 7)) < today && !db.tdsDeposits.some((d) => d.month === b.date.slice(0, 7) && d.section === b.tdsSection)).length
   return (
     <>
@@ -144,14 +145,14 @@ function Tds({ period }: { period: Period }) {
 
 function ChallanForm({ onClose, onSave }: { onClose: () => void; onSave: (c: { id: string; month: string; section: string; amount: number; challanNo: string; depositedOn: string }) => void }) {
   const { db } = useStore()
-  const now = new Date()
+  const now = new Date(useNow())
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1) // not setMonth(): 31 Mar → "31 Feb" overflows
   const [month, setMonth] = useState(toISODate(prev).slice(0, 7))
   const [section, setSection] = useState('194C')
   const owed = tdsBySection(db, { kind: 'month', key: month }).find((r) => r.section === section)
   const [amount, setAmount] = useState(0)
   const [challanNo, setChallanNo] = useState('')
-  const [date, setDate] = useState(toISODate(new Date()))
+  const [date, setDate] = useState(toISODate(new Date(now)))
   return (
     <Modal open title="Record TDS challan (ITNS 281)" onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={!amount || !challanNo.trim()} onClick={() => onSave({ id: uid('tds'), month, section, amount, challanNo: challanNo.trim(), depositedOn: date })}>Save</Button></>}>
       <div className="form-grid">

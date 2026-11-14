@@ -5,22 +5,28 @@ There is no backend: all data is stored in the browser's `localStorage`. Each co
 
 ```bash
 npm install
-npm run dev       # http://localhost:5173
-npm run build     # static build in dist/ (works on any host / sub-path)
+npm run dev         # http://localhost:5173
+npm run build       # type-check + static build in dist/ (works on any host / sub-path)
+npm run check       # type-check + lint + unit tests (also run by CI)
+npm test            # unit tests: money maths, statement parsing, auth service
 ```
+
+Documentation: [Authentication](docs/auth.md) · [Backend plan](docs/backend-plan.md) · [College needs analysis](docs/college-needs-analysis.md)
 
 ## Portals
 
 | Portal | Who | Sign in |
 |---|---|---|
-| **Platform console** (`#/super`) | Your team (platform owner) | `super@campusone.app`, any password |
+| **Platform console** (`#/super`) | Your team (platform owner) | `super@campusone.app` |
 | **Admin** | The college's administration | the college's admin email (any email works on the default demo college) |
 | **Staff** | Faculty | staff email or employee ID, e.g. `anita.krishnan@college.edu` |
 | **Student** | Students | roll number, e.g. `25CSE001` |
 | **Accounts** | Accounts office | `geetha.raman@college.edu` (Chief Accountant) |
 | HOD | Heads of department sign in as Staff | e.g. `anita.krishnan@college.edu` (CSE HOD) |
 
-In demo mode any password with 4+ characters works. The login page also lists every seeded user to pick from.
+**Demo sign-in:** every account uses the password `Demo@1234`. Sign-in then asks for a 6-digit code on a new browser; there is no mail server, so open the **Demo inbox** button (bottom right of the sign-in page) to read it. Tick "Trust this browser" to skip the code next time. The login page also lists every seeded user to pick from.
+
+Sign-in includes email verification, forgot/reset password, invite activation, lockout after repeated failures and a real password change in Profile. See [docs/auth.md](docs/auth.md).
 
 ### Platform super admin
 - Onboard a college. The portal URL is generated from the college name (`St. Mary's College` → `st-marys-college.campusone.app`), and you set the college admin's email, a plan and a starting brand colour.
@@ -98,23 +104,34 @@ The UI uses the **Caesar** design system: Black leads, Burgundy speaks once, Whi
 - **Page entry:** each page's blocks rise into place over about 0.3s using transforms only, so the animation never forces a re-layout. Sheets and popovers slide in. Animations switch off when the user has asked for reduced motion.
 - **Code splitting:** every page is its own chunk of 3–7 KB gzipped. Pages are prefetched when you hover a nav item, and all of a role's pages load in the background while the browser is idle. A page that has already been prefetched renders straight away, without React's Suspense delay (`src/routes.ts`).
 
-## White-labelling: how the college is found from the URL
-`src/lib/tenant.ts` works out which college to show, checking in this order:
-1. `?tenant=<slug>` (for previews and localhost)
-2. a custom domain that has been verified
-3. `<slug>.<VITE_PLATFORM_DOMAIN>` (defaults to `campusone.app`)
+## White-labelling: your own domain, not ours
+A college that owns `tnkcollege.com` can serve its portal on **`tnkportal.com`** (or `portal.tnkcollege.com`). Visitors, emails and links never show the platform's name.
+
+- **Admin → Settings → Domain** takes the domain and shows exactly which DNS records to add: an **A record** for a root domain (a CNAME is not allowed there), a **CNAME** for a sub-domain, a `www` CNAME, an ownership **TXT** record, and optional SPF/DKIM/DMARC records so the college can send email from its own domain. **Verify domain** reports each record as found or missing.
+- `tnkportal.com` and `www.tnkportal.com` open the same college. On a custom domain the sign-in page hides the platform-operator link, the page title, favicon, colours and logo are the college's, and emails link to the college's domain. Optional HTTPS redirect is built in.
+- The free sub-domain (`<slug>.campusone.app`) keeps working until a domain is connected.
+
+How the college is found (`src/lib/tenant.ts`), in order:
+1. `?tenant=<slug>` (previews and localhost)
+2. a verified custom domain (with or without `www.`)
+3. `<slug>.<VITE_PLATFORM_DOMAIN>`
 4. the default demo college
 
-If the URL names a college that doesn't exist, a "College not found" page is shown. The colour, favicon, page title and logo are applied when the app loads (`src/lib/theme.ts`).
+An unknown college shows "College not found". DNS verification is simulated by default; `VITE_DNS_VERIFY=doh` checks real records through a public DNS-over-HTTPS resolver. Real certificates, routing by host name and a shared tenant registry need the backend (see [docs/backend-plan.md](docs/backend-plan.md#4-custom-domains-white-label)): in this front-end build each domain has its own browser storage.
 
 ## Email delivery
 A browser can't use SMTP directly, and it shouldn't hold provider API keys. Choose the **HTTPS relay** provider to have each message POSTed as JSON to your backend: `{ from, replyTo, to[], subject, text }`. With any other provider the settings are checked, sending is simulated, and the message is recorded in the outbox.
 
 ## Environment variables
-| Variable | Default |
-|---|---|
-| `VITE_PLATFORM_DOMAIN` | `campusone.app` |
-| `VITE_SUPER_ADMIN_EMAIL` | `super@campusone.app` |
+Copy `.env.example` to `.env.local` to change them.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_PLATFORM_DOMAIN` | `campusone.app` | Colleges get `<slug>.<this>` |
+| `VITE_SUPER_ADMIN_EMAIL` | `super@campusone.app` | Platform console sign-in |
+| `VITE_AUTH_DEMO` | `true` | Demo password and Demo inbox; `false` = invite/activation links only |
+| `VITE_DNS_VERIFY` | `simulate` | `doh` = check real DNS records |
+| `VITE_PLATFORM_IPS` | `203.0.113.10` | Address a root domain's A record points to |
 
 ## Moving to production
-This app is a front-end prototype. The credential checks, domain verification and payment gateway are all simulated. To go live, connect it to a backend that handles authentication, tenant lookup, DNS checks, payments (Razorpay, Stripe or PayU) and email.
+This app is a front-end prototype. Accounts, sessions, codes, domain verification and the payment gateway live in or are simulated by the browser, so anyone with access to the browser profile can read them. [docs/backend-plan.md](docs/backend-plan.md) covers what to build, in what order: tenancy with row-level security, server-side auth (Argon2id, cookie sessions, SSO), custom-domain certificates, realtime, files, email/SMS, payments, compliance (DPDP Act) and a phased roadmap. The auth layer is already shaped like the API, so most of the move is swapping `src/auth/service.ts` for HTTP calls.

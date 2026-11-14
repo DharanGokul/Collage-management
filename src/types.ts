@@ -303,6 +303,11 @@ export interface LineItem {
   qty: number
   rate: number
   gstRate: number
+  /**
+   * Explicit GST for the whole line. Set on GST-inclusive lines (fees), where the total is fixed and the tax is
+   * derived from it; otherwise GST is `qty × rate × gstRate / 100`.
+   */
+  gstAmount?: number
 }
 
 export type BillCategory = 'equipment' | 'maintenance' | 'utilities' | 'stationery' | 'services' | 'professional' | 'rent' | 'events' | 'other'

@@ -67,6 +67,7 @@ export function StatusHead({ icon, tone = 'accent', title, children }: { icon: R
 export function useCountdown(until: number) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- resync the clock immediately when `until` changes, before the first interval tick
     setNow(Date.now())
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
@@ -186,6 +187,7 @@ export function DemoMailbox({ scope }: { scope: string }) {
   const count = mails.length
   const unread = Math.max(0, count - seen)
   const toggle = useCallback(() => setOpen((o) => { if (!o) setSeen(count); return !o }), [count])
+  // oxlint-disable-next-line react/set-state-in-effect -- keeps the unread badge cleared while the mailbox (external localStorage store) receives mail with the panel open
   useEffect(() => { if (open) setSeen(count) }, [open, count])
   useEffect(() => {
     if (!open) return

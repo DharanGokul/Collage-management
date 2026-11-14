@@ -2,38 +2,42 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BookOpen, CalendarCheck, Clock, MessageSquareText, ClipboardCheck, PartyPopper, Megaphone } from 'lucide-react'
 import { useStore } from '../../store/AppStore'
+import { useNow, useToday } from '../../lib/useNow'
 import { Badge, Button, Card, Empty } from '../../components/ui'
 import { ComingUp, Greeting, NeedsYou, Pulse, UpNext, WeekAhead, type Need } from '../../components/dash'
 import { EventDetail, useRegistration } from '../shared/eventsUi'
 import { addDays, agenda, canRegister, eventRange, type AgendaItem } from '../../lib/agenda'
-import { classLabel, formatDate, toISODate, weekdayIndex } from '../../lib/utils'
+import { classLabel, formatDate, weekdayIndex } from '../../lib/utils'
 import type { CampusEvent } from '../../types'
 
 export default function StaffDashboard() {
   const { db, session } = useStore()
   const go = useNavigate()
+  const now = useNow()
+  const todayISO = useToday()
   const { register } = useRegistration()
   const [viewing, setViewing] = useState<CampusEvent | null>(null)
   const me = db.staff.find((s) => s.id === session?.userId)
   const subjects = db.subjects.filter((s) => s.staffId === session?.userId)
   const ids = new Set(subjects.map((s) => s.id))
-  const todayISO = toISODate(new Date())
-  const todays = db.timetable.filter((t) => t.day === weekdayIndex(new Date()) && ids.has(t.subjectId)).sort((a, b) => a.period - b.period)
+  const todays = db.timetable.filter((t) => t.day === weekdayIndex(new Date(now)) && ids.has(t.subjectId)).sort((a, b) => a.period - b.period)
   const pending = todays.filter((t) => {
     const p = db.periods.find((x) => x.no === t.period)
-    const started = p && new Date(`${todayISO}T${p.start}`) <= new Date()
+    const started = p && new Date(`${todayISO}T${p.start}`) <= new Date(now)
     return started && !db.attendance.some((a) => a.date === todayISO && a.classKey === t.classKey && a.period === t.period)
   })
   const myClasses = [...new Set(db.timetable.filter((t) => ids.has(t.subjectId)).map((t) => t.classKey))].sort()
 
-  const now = new Date()
-  const upcoming = useMemo(() => (session ? agenda(db, session, now, addDays(now, 21), { includeClasses: true, includeFees: false }).filter((i) => i.end > now) : []), [db, session]) // eslint-disable-line react-hooks/exhaustive-deps
+  const upcoming = useMemo(() => {
+    const n = new Date(now)
+    return session ? agenda(db, session, n, addDays(n, 21), { includeClasses: true, includeFees: false }).filter((i) => i.end > n) : []
+  }, [db, session, now])
   const nonClass = upcoming.filter((i) => i.kind !== 'class')
   const week = useMemo(() => {
-    const s = new Date()
+    const s = new Date(now)
     s.setHours(0, 0, 0, 0)
     return session ? agenda(db, session, s, addDays(s, 7), { includeFees: false }) : []
-  }, [db, session])
+  }, [db, session, now])
   const myTickets = db.tickets.filter((t) => t.from.userId === session?.userId)
   const openEvents = session ? db.events.filter((e) => e.registration.enabled && canRegister(db, session, e).ok && !e.registrations.some((r) => r.userId === session.userId)) : []
 
