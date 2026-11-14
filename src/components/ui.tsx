@@ -110,6 +110,24 @@ export function overlayOpen(delta: 1 | -1) {
 }
 
 export function Modal({ open, title, onClose, children, footer, wide }: { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const [opener] = useState(() => (typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null)) // read before autoFocus moves focus
+  // Keyboard: move focus into the dialog, keep Tab inside it, and hand focus back to the opener on close.
+  useEffect(() => {
+    if (!open) return
+    const box = dialogRef.current
+    const focusables = () => Array.from(box?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? []).filter((el) => el.offsetParent !== null)
+    if (box && !box.contains(document.activeElement)) ((window.matchMedia('(pointer: fine)').matches ? (box.querySelector<HTMLElement>('.modal-body input, .modal-body select, .modal-body textarea') ?? focusables()[0]) : null) ?? box).focus() // touch: no soft keyboard pop-up
+    const onTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !box) return
+      const f = focusables()
+      if (!f.length) return
+      if (e.shiftKey && (document.activeElement === f[0] || !box.contains(document.activeElement))) { e.preventDefault(); f[f.length - 1].focus() }
+      else if (!e.shiftKey && (document.activeElement === f[f.length - 1] || !box.contains(document.activeElement))) { e.preventDefault(); f[0].focus() }
+    }
+    window.addEventListener('keydown', onTab)
+    return () => { window.removeEventListener('keydown', onTab); if (opener?.isConnected) opener.focus() }
+  }, [open, opener])
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -126,7 +144,7 @@ export function Modal({ open, title, onClose, children, footer, wide }: { open: 
   if (!open) return null
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+      <div ref={dialogRef} tabIndex={-1} className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <header className="modal-head">
           <h3>{title}</h3>
           <button className="icon-btn" onClick={onClose} aria-label="Close">

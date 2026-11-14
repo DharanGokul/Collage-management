@@ -33,6 +33,8 @@ export interface TenantRef {
 
 const REGISTRY_KEY = 'cms:registry'
 
+/** Sub-domains the platform keeps for itself (a college must not look like the platform or its support). */
+export const RESERVED_SLUGS = new Set(['www', 'app', 'api', 'admin', 'super', 'superadmin', 'login', 'portal', 'mail', 'support', 'help', 'status', 'billing', 'static', 'assets', 'cdn', 'demo', 'test'])
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/
 export const DOMAIN_RE = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
 
@@ -105,6 +107,7 @@ export function slugify(name: string) {
 /** Returns an error message if the slug / domain is already taken by another tenant. */
 export function checkAvailability(id: string, subdomain: string, customDomain: string): string | null {
   const others = readRegistry().filter((t) => t.id !== id)
+  if (RESERVED_SLUGS.has(subdomain) && !readRegistry().some((t) => t.id === id && t.subdomain === subdomain)) return `The sub-domain "${subdomain}" is reserved by the platform.`
   if (others.some((t) => t.subdomain === subdomain)) return `The sub-domain "${subdomain}" is already in use.`
   if (customDomain && others.some((t) => t.customDomain === customDomain))
     return `The domain "${customDomain}" is already connected to another college.`

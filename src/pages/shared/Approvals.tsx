@@ -60,7 +60,7 @@ export default function Approvals() {
       }
       if (x.status === 'pending_hod') {
         x.status = afterHodApproval(d, x)
-        x.timeline.push({ at: now(), by: actor, action: 'Approved by HOD', note: note || undefined })
+        x.timeline.push({ at: now(), by: actor, action: isAdmin ? 'Approved by management (no HOD appointed)' : 'Approved by HOD', note: note || undefined })
         notify(d, [requester], { kind: 'request', important: x.status === 'approved', title: `${x.ref} approved by HOD${x.status === 'pending_admin' ? ' → management' : ''}`, body: x.title, link: '/staff/requests' })
         if (x.status === 'pending_admin') notify(d, ['admin:admin'], { kind: 'approval', important: true, title: `Approval needed · ${x.ref}`, body: `${x.title} · ${formatMoney(x.estimatedCost, d.branding.currency)} · ${x.department}`, link: '/admin/approvals' })
       } else {

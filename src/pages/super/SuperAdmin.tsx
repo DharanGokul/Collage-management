@@ -5,7 +5,7 @@ import { Badge, Button, Card, Empty, Field, Modal, Stat } from '../../components
 import { ThemeToggle } from '../../components/Layout'
 import Toaster from '../../components/Toaster'
 import { useStore, provisionTenant, readTenantDb, deleteTenantData } from '../../store/AppStore'
-import { PLATFORM_DOMAIN, SLUG_RE, listTenants, patchTenant, portalUrl, previewUrl, removeTenant, slugify, type TenantPlan, type TenantRef } from '../../lib/tenant'
+import { PLATFORM_DOMAIN, RESERVED_SLUGS, SLUG_RE, listTenants, patchTenant, portalUrl, previewUrl, removeTenant, slugify, type TenantPlan, type TenantRef } from '../../lib/tenant'
 import { PRESET_COLORS } from '../../lib/theme'
 import { formatDate, formatMoney, isValidEmail } from '../../lib/utils'
 
@@ -200,7 +200,7 @@ function OnboardModal({ existing, onClose, onCreated }: { existing: TenantRef[];
   const effectiveSlug = slugEdited ? slug : slugify(name)
   const errors = {
     name: name.trim().length < 3 ? 'Enter the college name' : null,
-    slug: !SLUG_RE.test(effectiveSlug) ? '3–32 lowercase letters, numbers or hyphens' : existing.some((t) => t.subdomain === effectiveSlug) ? 'This URL is already taken' : null,
+    slug: !SLUG_RE.test(effectiveSlug) ? '3–32 lowercase letters, numbers or hyphens' : existing.some((t) => t.subdomain === effectiveSlug) ? 'This URL is already taken' : RESERVED_SLUGS.has(effectiveSlug) ? 'This name is reserved by the platform' : null,
     email: !isValidEmail(adminEmail) ? 'Enter a valid email for the college administrator' : null,
   }
   const hasErr = Object.values(errors).some(Boolean)

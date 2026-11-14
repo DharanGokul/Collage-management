@@ -1385,3 +1385,6 @@ html { scroll-behavior: smooth; }
 .show-sm { display: none; }
 .table .nowrap-cell { white-space: nowrap; }
 @media (max-width: 400px) { .upnext-art .slab-word { font-size: 32px; } }
+
+/* QA: modal receives programmatic focus; the ring belongs on its controls */
+.modal:focus { outline: none; }

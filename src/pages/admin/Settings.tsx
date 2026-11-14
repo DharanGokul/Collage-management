@@ -8,16 +8,16 @@ import { HARMONIES, deriveSecondary, resolveSecondary } from '../../lib/color'
 import ColorPicker from '../../components/ColorPicker'
 import { DOMAIN_RE, PLATFORM_DOMAIN, SLUG_RE, checkAvailability, portalUrl, previewUrl, verifyDomain } from '../../lib/tenant'
 import { PROVIDERS, sendEmail, validateEmailSettings } from '../../lib/email'
-import { formatDate, isValidEmail } from '../../lib/utils'
+import { formatDate, formatMoney, isValidEmail } from '../../lib/utils'
 import type { Branding, DomainSettings, EmailSettings } from '../../types'
 import { useThemeMode } from '../../components/ThemeSwitch'
 import { DAY_START, NIGHT_START, followCollegeDefault } from '../../lib/themeMode'
 
-type Tab = 'branding' | 'domain' | 'email' | 'data'
+type Tab = 'branding' | 'domain' | 'email' | 'approvals' | 'data'
 
 export default function SettingsPage() {
   const [params, setParams] = useSearchParams()
-  const tab = (['branding', 'domain', 'email', 'data'].includes(params.get('tab') ?? '') ? params.get('tab') : 'branding') as Tab
+  const tab = (['branding', 'domain', 'email', 'approvals', 'data'].includes(params.get('tab') ?? '') ? params.get('tab') : 'branding') as Tab
   return (
     <>
       <PageHeader title="Settings & Branding" subtitle="White-label the portal for your college" />
@@ -28,12 +28,14 @@ export default function SettingsPage() {
           { id: 'branding', label: 'Branding', icon: <Palette size={16} /> },
           { id: 'domain', label: 'Domain & URL', icon: <Globe size={16} /> },
           { id: 'email', label: 'Email sending', icon: <Mail size={16} /> },
+          { id: 'approvals', label: 'Approval limit', icon: <ShieldCheck size={16} /> },
           { id: 'data', label: 'Data', icon: <DbIcon size={16} /> },
         ]}
       />
       {tab === 'branding' && <BrandingTab />}
       {tab === 'domain' && <DomainTab />}
       {tab === 'email' && <EmailTab />}
+      {tab === 'approvals' && <ApprovalLimitTab />}
       {tab === 'data' && <DataTab />}
     </>
   )
@@ -434,6 +436,28 @@ function EmailTab() {
           </div>
         </Card>
       </div>
+    </div>
+  )
+}
+
+/* ---------------- Approval limit ---------------- */
+
+/** Management owns the spending threshold; GST/TDS registrations stay with Accounts. */
+function ApprovalLimitTab() {
+  const { db, update, toast } = useStore()
+  const cur = db.branding.currency
+  const [v, setV] = useState(String(db.tax.procurementApprovalLimit))
+  const n = Number(v)
+  const err = v.trim() === '' || !Number.isFinite(n) || n < 0 ? 'Enter an amount of 0 or more' : null
+  return (
+    <div className="grid two">
+      <Card title="Purchase approval limit">
+        <p className="muted">Equipment and repair requests above this amount, and every purchase, need management approval after the HOD. Currently {formatMoney(db.tax.procurementApprovalLimit, cur)}.</p>
+        <div className="form-grid mt">
+          <Field label={`Limit (${cur})`} error={err}>{(id) => <input id={id} type="number" min={0} step={1000} inputMode="numeric" className="input" value={v} onChange={(e) => setV(e.target.value)} />}</Field>
+        </div>
+        <div className="row mt"><span className="spacer" /><Button disabled={!!err || n === db.tax.procurementApprovalLimit} onClick={() => { update((d) => { d.tax.procurementApprovalLimit = Math.round(n) }); toast('Approval limit saved') }}>Save</Button></div>
+      </Card>
     </div>
   )
 }
