@@ -4,8 +4,8 @@ import { notify, useStore } from '../../store/AppStore'
 import { Avatar, Badge, Button, Card, Field, PageHeader } from '../../components/ui'
 import { ThemeSwitchWithDefault } from '../../components/ThemeSwitch'
 import { readImage } from '../../lib/theme'
-import { formatDate, isValidEmail, uid } from '../../lib/utils'
-import { displayName, hodOf, isHod, photoOf, roleLabel } from '../../lib/workflow'
+import { formatDate, formatMoney, isValidEmail, studentFeeStatus, uid } from '../../lib/utils'
+import { displayName, hodDepartment, hodOf, isHod, leaveBalance, photoOf, roleLabel } from '../../lib/workflow'
 import type { ProfileChange, Student } from '../../types'
 
 type Editable = { name: string; email: string; phone: string; guardianName: string; guardianPhone: string; bio: string; designation: string; photo: string | null }
@@ -69,6 +69,84 @@ export default function Profile() {
   }
 }
 
+/** Role-specific facts shown beside the editable details. */
+function RoleSummary() {
+  const { db, session } = useStore()
+  if (!session) return null
+  const { role, userId } = session
+  type Row = [string, string]
+  let title = 'At a glance'
+  let rows: Row[] = []
+
+  if (role === 'student') {
+    const s = db.students.find((x) => x.id === userId)
+    if (!s) return null
+    const key = `${s.department}|${s.year}|${s.section}`
+    let total = 0, present = 0
+    for (const a of db.attendance) if (a.classKey === key && a.marks[s.id]) { total++; if (a.marks[s.id] !== 'A') present++ }
+    const pct = total ? Math.round((present / total) * 100) : null
+    const open = studentFeeStatus(db, s).filter((f) => f.status !== 'paid')
+    const hod = db.staff.find((x) => x.id === hodOf(db, s.department))
+    title = 'My academics'
+    rows = [
+      ['Class', `${s.department} · Year ${s.year} · Sec ${s.section}`],
+      ['Attendance', pct === null ? 'No classes yet' : `${pct}%${pct < 75 ? ' · below 75%' : ''}`],
+      ['Fees', open.length ? `${open.length} pending · ${formatMoney(open.reduce((a, f) => a + f.total, 0), db.branding.currency)}` : 'All paid'],
+      ['Head of department', hod?.name ?? '—'],
+      ['Joined', formatDate(s.joinedOn)],
+    ]
+  } else if (role === 'staff') {
+    const st = db.staff.find((x) => x.id === userId)
+    if (!st) return null
+    const mine = db.subjects.filter((x) => x.staffId === st.id)
+    const periods = db.timetable.filter((t) => mine.some((m) => m.id === t.subjectId)).length
+    const hodDept = hodDepartment(db, st.id)
+    const lv = (t: 'casual' | 'sick' | 'earned') => { const b = leaveBalance(db, st.id, t); return `${b.left} of ${b.quota} left` }
+    title = hodDept ? 'Department & teaching' : 'Teaching & leave'
+    rows = [
+      ['Employee ID', st.empId],
+      ['Department', st.department + (hodDept ? ' · Head of department' : '')],
+      ['Subjects', mine.length ? mine.map((m) => m.code).join(', ') : 'None assigned'],
+      ['Periods per week', String(periods)],
+      ['Casual leave', lv('casual')],
+      ['Sick leave', lv('sick')],
+      ['Earned leave', lv('earned')],
+      ...(hodDept ? [['Approvals waiting', String(db.requests.filter((r) => r.status === 'pending_hod' && r.department === hodDept.code).length)] as Row] : []),
+    ]
+  } else if (role === 'accountant') {
+    const ac = db.accountants.find((x) => x.id === userId)
+    title = 'Accounts desk'
+    rows = [
+      ['Employee ID', ac?.empId ?? '—'],
+      ['Bills to pay', String(db.bills.filter((b) => b.status === 'approved').length)],
+      ['Awaiting management', String(db.bills.filter((b) => b.status === 'pending').length)],
+      ['Unreconciled bank lines', String(db.bankTxns.filter((t) => !t.match).length)],
+      ['Bank accounts', String(db.bankAccounts.length)],
+    ]
+  } else {
+    title = 'College overview'
+    rows = [
+      ['Active students', String(db.students.filter((x) => x.status === 'active').length)],
+      ['Active staff', String(db.staff.filter((x) => x.status === 'active').length)],
+      ['Departments', String(db.departments.length)],
+      ['Approvals waiting', String(db.requests.filter((r) => r.status === 'pending_admin').length + db.leaves.filter((l) => l.status === 'pending' && l.approver === 'admin').length)],
+    ]
+  }
+
+  return (
+    <Card title={title}>
+      <dl className="kv">
+        {rows.map(([k, v]) => (
+          <div key={k} className="row" style={{ justifyContent: 'space-between', gap: 12, padding: '6px 0' }}>
+            <dt className="muted tiny">{k}</dt>
+            <dd style={{ margin: 0, textAlign: 'right' }}><strong>{v}</strong></dd>
+          </div>
+        ))}
+      </dl>
+    </Card>
+  )
+}
+
 function ProfileForm({ current, student, pending, history, fileRef, onSave }: { current: Editable; student?: Student; pending?: ProfileChange; history: ProfileChange[]; fileRef: React.RefObject<HTMLInputElement | null>; onSave: (e: Editable, reason: string) => void }) {
   const { db, session, update, toast } = useStore()
   const base: Editable = pending ? { ...current, ...(pending.changes as Partial<Editable>) } : current
@@ -104,7 +182,7 @@ function ProfileForm({ current, student, pending, history, fileRef, onSave }: { 
 
   return (
     <>
-      <PageHeader title="My profile" subtitle={role === 'student' ? `Changes are reviewed by your HOD${hodName ? ` (${hodName})` : ''} before they appear on your record.` : 'Your photo and contact details across the portal.'} />
+      <PageHeader title="My profile" subtitle={role === 'student' ? `Changes are reviewed by your HOD${hodName ? ` (${hodName})` : ''} before they appear on your record.` : role === 'admin' ? 'You can edit every detail on your own profile.' : role === 'accountant' ? 'Your photo and phone. Name and designation are set by the administrator.' : 'Your photo, phone and bio. Official details are set by the administrator.'} />
       <div className="grid side">
         <div className="stack-l">
           <Card>
@@ -123,6 +201,7 @@ function ProfileForm({ current, student, pending, history, fileRef, onSave }: { 
               <small className="muted center">JPG, PNG or WEBP · square works best · up to 2 MB</small>
             </div>
           </Card>
+          <RoleSummary />
           <Card title="Appearance">
             <ThemeSwitchWithDefault />
           </Card>
