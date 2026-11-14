@@ -28,6 +28,7 @@ export default function Login() {
   const auth = useAuth()
   const nav = useNavigate()
   const adminEmail = getTenant(tenant.id)?.adminEmail
+  const whiteLabel = tenant.via === 'custom-domain'
   const [step, setStep] = useState<Step>({ kind: 'credentials' })
   const [role, setRole] = useState<Role>('admin')
   const [identifier, setIdentifier] = useState(() => adminEmail ?? 'admin@college.edu')
@@ -155,9 +156,10 @@ export default function Login() {
         <Button type="submit" className="w-full" loading={busy}>Sign in as {ROLES.find((r) => r.id === role)?.label}</Button>
         <p className="tiny muted center">
           {AUTH_DEMO ? <>Demo mode · password <code>{DEMO_PASSWORD}</code> · codes appear in the Demo inbox</> : <>Protected sign-in with email verification</>}
-          {tenant.via !== 'default' && <> · tenant <code>{tenant.slug}</code></>}
+          {tenant.via === 'query' && <> · tenant <code>{tenant.slug}</code></>}
         </p>
-        <p className="tiny center"><Link to="/super/login" className="link">Platform super admin →</Link></p>
+        {/* A college on its own domain never shows the platform operator's entry point. */}
+        {!whiteLabel && <p className="tiny center"><Link to="/super/login" className="link">Platform super admin →</Link></p>}
       </form>
     </AuthShell>
   )

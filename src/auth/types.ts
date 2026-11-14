@@ -130,6 +130,7 @@ export type AuthErrorCode =
   | 'weak_password'
   | 'wrong_password'
   | 'not_found'
+  | 'insecure_context'
 
 export class AuthError extends Error {
   code: AuthErrorCode

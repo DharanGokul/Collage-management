@@ -132,7 +132,8 @@ export function resolveTenant(loc: Location = window.location): ResolvedTenant {
     return { id: hit?.id ?? '', via: 'query', slug: param, missing: !hit }
   }
 
-  const byDomain = registry.find((t) => t.customDomain && t.domainVerified && t.customDomain === host)
+  // tnkportal.com and www.tnkportal.com both open the same college.
+  const byDomain = registry.find((t) => t.customDomain && t.domainVerified && (t.customDomain === host || `www.${t.customDomain}` === host))
   if (byDomain) return { id: byDomain.id, via: 'custom-domain', slug: byDomain.subdomain }
 
   const suffix = '.' + PLATFORM_DOMAIN
@@ -161,12 +162,93 @@ export function previewUrl(subdomain: string) {
   return u.toString()
 }
 
+/* ------------------------------------------------------------------ custom domains */
+
+/** Second-level public suffixes, so "tnkcollege.ac.in" is treated as an apex domain. The backend should use the full Public Suffix List. */
+const SECOND_LEVEL_SUFFIXES = new Set(['co.in', 'ac.in', 'edu.in', 'org.in', 'gov.in', 'net.in', 'res.in', 'co.uk', 'ac.uk', 'org.uk', 'com.au', 'edu.au', 'co.nz', 'ac.nz', 'co.za', 'ac.za', 'com.sg', 'edu.sg', 'com.my', 'edu.my', 'co.jp', 'ac.jp', 'edu.pk', 'com.pk', 'edu.np', 'ac.lk', 'com.bd', 'edu.bd', 'edu.ph', 'com.ph'])
+
+/** `tnkportal.com` / `tnk.ac.in` are apex (root) domains: DNS does not allow a CNAME there. */
+export function isApexDomain(domain: string): boolean {
+  const labels = domain.split('.')
+  return labels.length === 2 || (labels.length === 3 && SECOND_LEVEL_SUFFIXES.has(labels.slice(1).join('.')))
+}
+
+/** Where an apex domain points. Replace with the platform's real edge addresses. */
+export const PLATFORM_IPS: string[] = (import.meta.env.VITE_PLATFORM_IPS || '203.0.113.10').split(',').map((x: string) => x.trim())
+
+export interface DnsRecord {
+  id: 'route' | 'www' | 'verify' | 'spf' | 'dkim' | 'dmarc'
+  purpose: string
+  type: 'A' | 'CNAME' | 'TXT'
+  /** As most DNS panels want it: relative to the domain ("@" for the root). */
+  host: string
+  fqdn: string
+  value: string
+  /** Optional records are guidance (e.g. email authentication) and are not part of verification. */
+  required: boolean
+}
+
+export function dnsRecordsFor(domain: string, ctx: { tenantId: string; subdomain: string }): DnsRecord[] {
+  if (!domain) return []
+  const apex = isApexDomain(domain)
+  const target = `${ctx.subdomain}.${PLATFORM_DOMAIN}`
+  const label = apex ? '@' : domain.split('.')[0]
+  const rel = (name: string) => (apex ? name : `${name}.${label}`)
+  const records: DnsRecord[] = [
+    apex
+      ? { id: 'route', purpose: 'Point your domain to the portal', type: 'A', host: '@', fqdn: domain, value: PLATFORM_IPS[0], required: true }
+      : { id: 'route', purpose: 'Point your domain to the portal', type: 'CNAME', host: label, fqdn: domain, value: target, required: true },
+  ]
+  if (apex) records.push({ id: 'www', purpose: 'Make www open the same portal', type: 'CNAME', host: 'www', fqdn: `www.${domain}`, value: target, required: false })
+  records.push(
+    { id: 'verify', purpose: 'Prove you own the domain', type: 'TXT', host: rel('_campus'), fqdn: `_campus.${domain}`, value: `campus-verify=${ctx.tenantId}-${ctx.subdomain}`, required: true },
+    { id: 'spf', purpose: 'Email: allow the portal to send as you', type: 'TXT', host: label, fqdn: domain, value: `v=spf1 include:_spf.${PLATFORM_DOMAIN} ~all`, required: false },
+    { id: 'dkim', purpose: 'Email: sign messages (DKIM)', type: 'CNAME', host: rel('campus._domainkey'), fqdn: `campus._domainkey.${domain}`, value: `campus.dkim.${PLATFORM_DOMAIN}`, required: false },
+    { id: 'dmarc', purpose: 'Email: tell inboxes how to treat spoofed mail', type: 'TXT', host: rel('_dmarc'), fqdn: `_dmarc.${domain}`, value: `v=DMARC1; p=none; rua=mailto:dmarc@${domain}`, required: false },
+  )
+  return records
+}
+
+export interface DomainCheck {
+  id: DnsRecord['id']
+  label: string
+  ok: boolean
+  /** What DNS answered, so the admin can see what to correct. */
+  found: string[]
+}
+
 /**
- * Simulated DNS verification. A real implementation would ask the backend to
- * resolve the CNAME / TXT record. Here: any syntactically valid domain that is
- * not on a reserved TLD verifies after a short delay.
+ * `simulate` (default in this front-end build): any well-formed domain on a real-looking TLD passes.
+ * `doh`: ask a public DNS-over-HTTPS resolver for the actual records. In production the backend does this check
+ * (and reads the CNAME/A target itself), because browsers cannot reach every resolver and CSP may block it.
  */
-export async function verifyDomain(domain: string): Promise<boolean> {
-  await new Promise((r) => setTimeout(r, 1200))
-  return DOMAIN_RE.test(domain) && !/\.(invalid|test|example|localhost)$/.test(domain)
+export const DNS_VERIFY_MODE: 'simulate' | 'doh' = import.meta.env.VITE_DNS_VERIFY === 'doh' ? 'doh' : 'simulate'
+
+async function dnsLookup(name: string, type: 'A' | 'CNAME' | 'TXT'): Promise<string[]> {
+  const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`, { headers: { accept: 'application/dns-json' } })
+  if (!res.ok) throw new Error(`DNS lookup failed (${res.status})`)
+  const json = (await res.json()) as { Answer?: { type: number; data: string }[] }
+  const want = { A: 1, CNAME: 5, TXT: 16 }[type]
+  return (json.Answer ?? []).filter((a) => a.type === want).map((a) => String(a.data).replace(/^"|"$/g, '').replace(/\.$/, ''))
+}
+
+export async function verifyDomain(domain: string, ctx: { tenantId: string; subdomain: string }): Promise<{ ok: boolean; checks: DomainCheck[]; error?: string }> {
+  const required = dnsRecordsFor(domain, ctx).filter((r) => r.required)
+  if (DNS_VERIFY_MODE === 'simulate') {
+    await new Promise((r) => setTimeout(r, 900))
+    const ok = DOMAIN_RE.test(domain) && !/\.(invalid|test|example|localhost)$/.test(domain)
+    return { ok, checks: required.map((r) => ({ id: r.id, label: r.purpose, ok, found: ok ? [r.value] : [] })) }
+  }
+  try {
+    const checks = await Promise.all(
+      required.map(async (r): Promise<DomainCheck> => {
+        const found = await dnsLookup(r.fqdn, r.type === 'A' ? 'A' : r.type)
+        const ok = r.type === 'A' ? found.some((ip) => PLATFORM_IPS.includes(ip)) : found.some((v) => v.toLowerCase() === r.value.toLowerCase())
+        return { id: r.id, label: r.purpose, ok, found }
+      }),
+    )
+    return { ok: checks.every((c) => c.ok), checks }
+  } catch (e) {
+    return { ok: false, checks: [], error: e instanceof Error ? e.message : 'DNS lookup failed' }
+  }
 }

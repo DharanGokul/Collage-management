@@ -141,6 +141,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => applyTheme(db.branding), [db.branding])
 
+  // A college on its own domain is served over HTTPS (the host normally redirects first; this is the client-side safety net).
+  useEffect(() => {
+    const { protocol, hostname, href } = window.location
+    if (tenant.via === 'custom-domain' && db.domain.forceHttps && protocol === 'http:' && !/^(localhost|127\.)/.test(hostname)) window.location.replace(href.replace(/^http:/, 'https:'))
+  }, [tenant.via, db.domain.forceHttps])
+
   // Realtime across tabs/windows: another tab saved → adopt its data immediately.
   // (In production this is a websocket/SSE subscription to the college's channel.)
   useEffect(() => {

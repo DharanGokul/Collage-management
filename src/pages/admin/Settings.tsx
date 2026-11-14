@@ -6,7 +6,7 @@ import { Badge, Button, Card, Field, Logo, PageHeader, Tabs } from '../../compon
 import { PRESET_COLORS, HEX_RE, applyPalette, contrastRatio, contrastText, readImage, generatedFavicon } from '../../lib/theme'
 import { HARMONIES, deriveSecondary, resolveSecondary } from '../../lib/color'
 import ColorPicker from '../../components/ColorPicker'
-import { DOMAIN_RE, PLATFORM_DOMAIN, SLUG_RE, checkAvailability, portalUrl, previewUrl, verifyDomain } from '../../lib/tenant'
+import { DNS_VERIFY_MODE, DOMAIN_RE, PLATFORM_DOMAIN, SLUG_RE, checkAvailability, dnsRecordsFor, isApexDomain, portalUrl, previewUrl, verifyDomain, type DnsRecord, type DomainCheck } from '../../lib/tenant'
 import { PROVIDERS, sendEmail, validateEmailSettings } from '../../lib/email'
 import { formatDate, formatMoney, isValidEmail } from '../../lib/utils'
 import type { Branding, DomainSettings, EmailSettings } from '../../types'
@@ -250,11 +250,15 @@ function DomainTab() {
   const { db, update, toast, tenant } = useStore()
   const [d, setD] = useState<DomainSettings>(db.domain)
   const [checking, setChecking] = useState(false)
+  const [checks, setChecks] = useState<DomainCheck[] | null>(null)
+  const [dnsError, setDnsError] = useState<string | null>(null)
   const slugErr = !SLUG_RE.test(d.subdomain) ? 'Use 3–32 lowercase letters, numbers or hyphens' : null
-  const domainErr = d.customDomain && !DOMAIN_RE.test(d.customDomain) ? 'Enter a domain like portal.myuniversity.edu' : d.customDomain.endsWith(PLATFORM_DOMAIN) ? `Use your own domain, not ${PLATFORM_DOMAIN}` : null
+  const domainErr = d.customDomain && !DOMAIN_RE.test(d.customDomain) ? 'Enter a domain like tnkportal.com or portal.tnkcollege.com' : d.customDomain.endsWith(PLATFORM_DOMAIN) ? `Use your own domain, not ${PLATFORM_DOMAIN}` : null
   const dirty = JSON.stringify(d) !== JSON.stringify(db.domain)
-  const target = `${db.domain.subdomain}.${PLATFORM_DOMAIN}`
-  const txt = `campus-verify=${tenant.id}-${db.domain.subdomain}`
+  const saved = db.domain.customDomain
+  const verified = db.domain.domainStatus === 'verified'
+  const records = dnsRecordsFor(saved, { tenantId: tenant.id, subdomain: db.domain.subdomain })
+  const apex = saved ? isApexDomain(saved) : false
 
   const save = () => {
     const conflict = checkAvailability(tenant.id, d.subdomain, d.customDomain)
@@ -262,20 +266,25 @@ function DomainTab() {
     const domainChanged = d.customDomain !== db.domain.customDomain
     update((x) => { x.domain = { ...d, domainStatus: domainChanged ? (d.customDomain ? 'pending' : 'none') : d.domainStatus } })
     setD((p) => ({ ...p, domainStatus: domainChanged ? (p.customDomain ? 'pending' : 'none') : p.domainStatus }))
+    if (domainChanged) setChecks(null)
     toast(domainChanged && d.customDomain ? 'Saved – add the DNS records below, then verify' : 'URL settings saved')
   }
 
   const verify = async () => {
     setChecking(true)
-    const ok = await verifyDomain(db.domain.customDomain)
+    setDnsError(null)
+    const res = await verifyDomain(saved, { tenantId: tenant.id, subdomain: db.domain.subdomain })
     setChecking(false)
-    const status = ok ? 'verified' : 'failed'
-    update((x) => { x.domain.domainStatus = status; x.domain.lastCheckedAt = new Date().toISOString() })
-    setD((p) => ({ ...p, domainStatus: status, lastCheckedAt: new Date().toISOString() }))
-    ok ? toast(`${db.domain.customDomain} is verified and live`) : toast('DNS records not found yet. Changes can take up to 48 hours.', 'error')
+    setChecks(res.checks)
+    if (res.error) return setDnsError(res.error)
+    const status = res.ok ? 'verified' : 'failed'
+    const at = new Date().toISOString()
+    update((x) => { x.domain.domainStatus = status; x.domain.lastCheckedAt = at })
+    setD((p) => ({ ...p, domainStatus: status, lastCheckedAt: at }))
+    res.ok ? toast(`${saved} is verified and live`) : toast('Some DNS records are missing. Changes can take up to 48 hours.', 'error')
   }
 
-  const live = portalUrl(db.domain.subdomain, db.domain.customDomain, db.domain.domainStatus === 'verified')
+  const live = portalUrl(db.domain.subdomain, db.domain.customDomain, verified)
 
   return (
     <div className="stack-l">
@@ -287,10 +296,14 @@ function DomainTab() {
           <span className="spacer" />
           <a className="btn btn-secondary btn-sm" href={previewUrl(db.domain.subdomain)} target="_blank" rel="noreferrer"><ExternalLink size={14} /><span>Open preview</span></a>
         </div>
-        <p className="tiny muted mt-s">Preview uses <code>?tenant={db.domain.subdomain}</code> on this deployment so you can test white-labelling before DNS is ready.</p>
+        {verified && saved ? (
+          <p className="tiny muted mt-s">Your portal opens on <strong>{saved}</strong>{apex ? <> and <strong>www.{saved}</strong></> : null}. Students and staff never see {PLATFORM_DOMAIN}; the sign-in page, emails and links all use your domain.</p>
+        ) : (
+          <p className="tiny muted mt-s">Preview uses <code>?tenant={db.domain.subdomain}</code> on this deployment so you can test white-labelling before DNS is ready.</p>
+        )}
       </Card>
       <Card title="Sub-domain">
-        <Field label="Your free sub-domain" error={slugErr}>
+        <Field label="Your free sub-domain" hint="Used until you connect your own domain" error={slugErr}>
           {(id) => (
             <div className="input-group">
               <span className="addon">https://</span>
@@ -300,37 +313,62 @@ function DomainTab() {
           )}
         </Field>
       </Card>
-      <Card title="Custom domain" actions={db.domain.customDomain && <DomainStatus s={db.domain.domainStatus} />}>
+      <Card title="Custom domain" actions={saved && <DomainStatus s={db.domain.domainStatus} />}>
         <div className="stack">
-          <Field label="Domain" hint="Use a sub-domain such as portal.yourcollege.edu" error={domainErr}>
-            {(id) => <input id={id} className="input mono" placeholder="portal.yourcollege.edu" value={d.customDomain} onChange={(e) => setD({ ...d, customDomain: e.target.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') })} />}
+          <Field label="Your domain" hint="A domain you own, such as tnkportal.com, or a sub-domain such as portal.tnkcollege.com" error={domainErr}>
+            {(id) => <input id={id} className="input mono" placeholder="tnkportal.com" autoCapitalize="none" spellCheck={false} value={d.customDomain} onChange={(e) => setD({ ...d, customDomain: e.target.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') })} />}
           </Field>
-          <label className="checkbox"><input type="checkbox" checked={d.forceHttps} onChange={(e) => setD({ ...d, forceHttps: e.target.checked })} /> Redirect HTTP to HTTPS (free TLS certificate)</label>
+          <label className="checkbox"><input type="checkbox" checked={d.forceHttps} onChange={(e) => setD({ ...d, forceHttps: e.target.checked })} /> Redirect HTTP to HTTPS (free TLS certificate, issued automatically once verified)</label>
           <div className="row gap-s">
             <Button disabled={!dirty || !!slugErr || !!domainErr} onClick={save}>Save</Button>
             {dirty && <Button variant="ghost" onClick={() => setD(db.domain)}>Discard</Button>}
           </div>
-          {db.domain.customDomain && (
+          {saved && (
             <>
               <h4 className="mt">DNS records</h4>
-              <p className="muted tiny">Add these at your DNS provider (GoDaddy, Cloudflare, Route 53…), then click Verify.</p>
-              <div className="table-wrap">
-                <table className="table dns">
-                  <thead><tr><th>Type</th><th>Host / Name</th><th>Value</th><th /></tr></thead>
-                  <tbody>
-                    <tr><td><Badge>CNAME</Badge></td><td className="mono">{db.domain.customDomain}</td><td className="mono">{target}</td><td><CopyBtn text={target} /></td></tr>
-                    <tr><td><Badge>TXT</Badge></td><td className="mono">_campus.{db.domain.customDomain}</td><td className="mono">{txt}</td><td><CopyBtn text={txt} /></td></tr>
-                  </tbody>
-                </table>
-              </div>
+              <p className="muted tiny">Add these at the company where you bought <strong>{saved}</strong> (GoDaddy, Cloudflare, Route 53, BigRock…), then click Verify. {apex ? 'A root domain cannot use a CNAME, so it points with an A record.' : 'A sub-domain points with a CNAME record.'}</p>
+              <DnsTable records={records.filter((r) => r.required || r.id === 'www')} checks={checks} />
+              <details className="dns-optional">
+                <summary>Optional: send email from @{saved} <span className="muted tiny">— improves delivery and stops spoofing</span></summary>
+                <DnsTable records={records.filter((r) => !r.required && r.id !== 'www')} checks={null} />
+                <p className="tiny muted">If you send through your own provider (SendGrid, SES, Mailgun) in the Email tab, add the records that provider gives you instead.</p>
+              </details>
               <div className="row gap-s">
                 <Button variant="secondary" icon={checking ? <Loader2 size={16} className="spin" /> : <ShieldCheck size={16} />} disabled={checking || dirty} onClick={verify}>{checking ? 'Checking DNS…' : 'Verify domain'}</Button>
                 {db.domain.lastCheckedAt && <small className="muted">Last checked {formatDate(db.domain.lastCheckedAt, { dateStyle: 'medium', timeStyle: 'short' } as Intl.DateTimeFormatOptions)}</small>}
               </div>
+              {dnsError && <div className="alert alert-error" role="alert">{dnsError}. Try again in a moment.</div>}
+              {DNS_VERIFY_MODE === 'simulate' && <p className="tiny muted">Demo build: verification is simulated. Set <code>VITE_DNS_VERIFY=doh</code> to check real DNS records.</p>}
             </>
           )}
         </div>
       </Card>
+    </div>
+  )
+}
+
+function DnsTable({ records, checks }: { records: DnsRecord[]; checks: DomainCheck[] | null }) {
+  return (
+    <div className="table-wrap">
+      <table className="table dns">
+        <thead><tr><th>Type</th><th>Host / Name</th><th>Value</th><th><span className="sr-only">Copy</span></th></tr></thead>
+        <tbody>
+          {records.map((r) => {
+            const c = checks?.find((x) => x.id === r.id)
+            return (
+              <tr key={r.id}>
+                <td><Badge>{r.type}</Badge></td>
+                <td className="mono" title={r.fqdn}>{r.host}<small className="muted block">{r.purpose}</small></td>
+                <td className="mono wrap-anywhere">
+                  {r.value}
+                  {c && <small className={c.ok ? 'text-green block' : 'text-red block'}>{c.ok ? '✓ Found' : c.found.length ? `✗ Found: ${c.found.join(', ')}` : '✗ Not found yet'}</small>}
+                </td>
+                <td><CopyBtn text={r.value} /></td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }

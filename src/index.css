@@ -1443,3 +1443,11 @@ button.link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset
 .mailbox footer { padding: 8px 14px; border-top: 1px solid var(--hairline); }
 .mailbox .pad { padding: 14px; }
 @media (max-width: 767px) { .mailbox-fab { bottom: 12px; right: 12px; } .mailbox { right: 12px; bottom: 60px; } }
+
+/* ===== Custom-domain DNS table ===== */
+.block { display: block; }
+.wrap-anywhere { overflow-wrap: anywhere; word-break: break-word; }
+.dns td small { margin-top: 2px; font-family: var(--font-body, inherit); }
+.dns-optional { border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: 10px 14px; }
+.dns-optional summary { cursor: pointer; font-weight: 600; font-size: 14px; min-height: 28px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dns-optional[open] summary { margin-bottom: 10px; }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, KeyRound, MailCheck } from 'lucide-react'
 import { Button, Field } from '../../components/ui'
 import { useAuth } from '../../auth/useAuth'
+import { AuthError } from '../../auth/types'
 import { isValidEmail } from '../../lib/utils'
 import { AuthShell, StatusHead } from './parts'
 
@@ -22,8 +23,8 @@ export default function ForgotPassword() {
     try {
       await auth.requestPasswordReset(email.trim())
       setSent(true)
-    } catch {
-      setError('Could not send the email. Please try again in a moment.')
+    } catch (err) {
+      setError(err instanceof AuthError ? err.message : 'Could not send the email. Please try again in a moment.')
     } finally {
       setBusy(false)
     }

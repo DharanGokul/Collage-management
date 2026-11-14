@@ -1,4 +1,4 @@
-import { pbkdf2, randomCode, randomToken, safeEqual, sha256 } from './crypto'
+import { pbkdf2, randomCode, randomToken, safeEqual, secureCryptoAvailable, sha256 } from './crypto'
 import { checkPassword, maskEmail } from './policy'
 import { loadAuthDb, saveAuthDb } from './storage'
 import { AuthError } from './types'
@@ -41,6 +41,10 @@ export interface SignInInput {
 }
 
 const nowIso = () => new Date().toISOString()
+
+function requireSecureContext() {
+  if (!secureCryptoAvailable()) throw new AuthError('insecure_context', 'Secure sign-in needs an HTTPS connection. Open this portal with https:// in the address bar.')
+}
 const uid = (p: string) => `${p}-${randomToken(9)}`
 
 function audit(db: AuthDb, type: AuthEvent['type'], accountId: string | null, detail?: string) {
@@ -176,6 +180,7 @@ async function sendInvite(dir: Directory, db: AuthDb, account: Account) {
 /* ------------------------------------------------------------------ sign-in */
 
 export async function signIn(dir: Directory, input: SignInInput): Promise<SignInResult> {
+  requireSecureContext()
   const db = loadAuthDb(dir.scope)
   const person = dir.find(input.role, input.identifier)
   const generic = new AuthError('invalid_credentials', 'Incorrect ID or password.')
@@ -231,6 +236,7 @@ export async function signIn(dir: Directory, input: SignInInput): Promise<SignIn
 }
 
 export async function verifyOtp(dir: Directory, input: { challengeId: string; code: string; trustDevice: boolean }): Promise<{ session: AuthSession; remember: boolean; deviceToken?: string }> {
+  requireSecureContext()
   const db = loadAuthDb(dir.scope)
   const c = db.challenges.find((x) => x.id === input.challengeId && x.kind === 'otp')
   const account = c && db.accounts.find((a) => a.id === c.accountId)
@@ -272,6 +278,7 @@ export async function resendOtp(dir: Directory, challengeId: string): Promise<{ 
 /* ------------------------------------------------------------ email verification */
 
 export async function verifyEmail(dir: Directory, token: string): Promise<{ email: string }> {
+  requireSecureContext()
   const db = loadAuthDb(dir.scope)
   const { challenge, account } = await redeem(db, token, 'email_verify')
   challenge.consumedAt = Date.now()
@@ -283,6 +290,7 @@ export async function verifyEmail(dir: Directory, token: string): Promise<{ emai
 
 /** Always resolves, so the response never reveals whether an address has an account. */
 export async function resendVerification(dir: Directory, email: string): Promise<void> {
+  requireSecureContext()
   const hit = dir.findByEmail(email)
   if (!hit) return
   const db = loadAuthDb(dir.scope)
@@ -295,6 +303,7 @@ export async function resendVerification(dir: Directory, email: string): Promise
 /* ------------------------------------------------------------- password reset */
 
 export async function requestPasswordReset(dir: Directory, email: string): Promise<void> {
+  requireSecureContext()
   const hit = dir.findByEmail(email)
   if (!hit || !hit.person.active) return
   const db = loadAuthDb(dir.scope)
@@ -309,6 +318,7 @@ export async function requestPasswordReset(dir: Directory, email: string): Promi
 
 /** Reads a token without spending it, so the page can show the right form (or an error) first. */
 export async function inspectToken(dir: Directory, token: string, kind: 'password_reset' | 'invite'): Promise<{ email: string; name: string }> {
+  requireSecureContext()
   const db = loadAuthDb(dir.scope)
   const { account } = await redeem(db, token, kind)
   return { email: maskEmail(account.email), name: account.name }
@@ -324,6 +334,7 @@ async function setPassword(db: AuthDb, account: Account, password: string) {
 }
 
 export async function resetPassword(dir: Directory, token: string, password: string): Promise<void> {
+  requireSecureContext()
   const db = loadAuthDb(dir.scope)
   const { challenge, account } = await redeem(db, token, 'password_reset')
   await setPassword(db, account, password)
@@ -334,6 +345,7 @@ export async function resetPassword(dir: Directory, token: string, password: str
 }
 
 export async function activateAccount(dir: Directory, token: string, password: string): Promise<void> {
+  requireSecureContext()
   const db = loadAuthDb(dir.scope)
   const { challenge, account } = await redeem(db, token, 'invite')
   await setPassword(db, account, password)
@@ -345,6 +357,7 @@ export async function activateAccount(dir: Directory, token: string, password: s
 }
 
 export async function changePassword(dir: Directory, session: Pick<AuthSession, 'aid'>, current: string, next: string): Promise<void> {
+  requireSecureContext()
   const db = loadAuthDb(dir.scope)
   const account = db.accounts.find((a) => a.id === session.aid)
   if (!account) throw new AuthError('not_found', 'Your account could not be found. Sign in again.')

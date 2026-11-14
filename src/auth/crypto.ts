@@ -2,6 +2,11 @@
 
 const enc = new TextEncoder()
 
+/** WebCrypto only exists on HTTPS pages (and localhost). Without it nothing can be hashed safely, so say so plainly. */
+export function secureCryptoAvailable(): boolean {
+  return typeof crypto !== 'undefined' && !!crypto.subtle
+}
+
 export function toBase64Url(bytes: Uint8Array): string {
   let s = ''
   for (const b of bytes) s += String.fromCharCode(b)
