@@ -3,6 +3,9 @@ import { Suspense, lazy, type ReactNode } from 'react'
 import { AppStoreProvider, useStore } from './store/AppStore'
 import Layout from './components/Layout'
 import Login from './pages/Login'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import SetPassword from './pages/auth/SetPassword'
+import VerifyEmail from './pages/auth/VerifyEmail'
 import { previewUrl } from './lib/tenant'
 import { page, type RoutePath } from './routes'
 import type { Role } from './types'
@@ -69,6 +72,10 @@ export default function App() {
             <Route path="/super/login" element={<SuperLogin />} />
             <Route path="/super" element={<SuperConsole />} />
             <Route path="/login" element={<TenantGate><Login /></TenantGate>} />
+            <Route path="/forgot-password" element={<TenantGate><ForgotPassword /></TenantGate>} />
+            <Route path="/reset-password" element={<TenantGate><SetPassword mode="reset" /></TenantGate>} />
+            <Route path="/activate" element={<TenantGate><SetPassword mode="activate" /></TenantGate>} />
+            <Route path="/verify-email" element={<TenantGate><VerifyEmail /></TenantGate>} />
             {(['admin', 'staff', 'student', 'accountant'] as Role[]).map(roleRoutes)}
             <Route path="*" element={<Home />} />
           </Routes>

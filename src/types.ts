@@ -485,4 +485,7 @@ export interface Session {
   role: Role
   userId: string // 'admin' for admin
   name: string
+  /** Auth account id and expiry (ms since epoch), set by the auth service. */
+  aid?: string
+  exp?: number
 }

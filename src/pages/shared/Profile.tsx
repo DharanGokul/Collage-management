@@ -3,6 +3,10 @@ import { Camera, Trash2, Send, Lock, ShieldCheck, Clock, Undo2, Save } from 'luc
 import { notify, useStore } from '../../store/AppStore'
 import { Avatar, Badge, Button, Card, Field, PageHeader } from '../../components/ui'
 import { ThemeSwitchWithDefault } from '../../components/ThemeSwitch'
+import { useAuth } from '../../auth/useAuth'
+import { AuthError } from '../../auth/types'
+import { checkPassword } from '../../auth/policy'
+import { PasswordField } from '../auth/parts'
 import { readImage } from '../../lib/theme'
 import { formatDate, formatMoney, isValidEmail, studentFeeStatus, uid } from '../../lib/utils'
 import { displayName, hodDepartment, hodOf, isHod, leaveBalance, photoOf, roleLabel } from '../../lib/workflow'
@@ -147,12 +151,52 @@ function RoleSummary() {
   )
 }
 
+function PasswordCard({ personal }: { personal: string[] }) {
+  const { session, toast } = useStore()
+  const auth = useAuth()
+  const [pw, setPw] = useState({ cur: '', next: '', confirm: '' })
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const check = checkPassword(pw.next, personal)
+  const ready = !!pw.cur && check.ok && pw.next === pw.confirm
+
+  const submit = async () => {
+    if (!session?.aid || busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      await auth.changePassword(session.aid, pw.cur, pw.next)
+      setPw({ cur: '', next: '', confirm: '' })
+      toast('Password updated')
+    } catch (e) {
+      setError(e instanceof AuthError ? e.message : 'Could not change the password.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card title="Password" actions={<ShieldCheck size={18} className="muted" />}>
+      <form className="stack" onSubmit={(e) => { e.preventDefault(); void submit() }} noValidate>
+        <PasswordField label="Current password" value={pw.cur} onChange={(v) => { setPw({ ...pw, cur: v }); setError(null) }} autoComplete="current-password" />
+        <PasswordField label="New password" value={pw.next} onChange={(v) => { setPw({ ...pw, next: v }); setError(null) }} autoComplete="new-password" meter personal={personal} />
+        <PasswordField label="Confirm new password" value={pw.confirm} onChange={(v) => setPw({ ...pw, confirm: v })} autoComplete="new-password" error={pw.confirm && pw.confirm !== pw.next ? 'Does not match' : null} />
+        {error && <div className="alert alert-error" role="alert">{error}</div>}
+        <div className="row gap-s">
+          <span className="muted tiny">A confirmation email is sent after every change.</span>
+          <span className="spacer" />
+          <Button type="submit" variant="secondary" icon={<Lock size={16} />} loading={busy} disabled={!ready}>Change password</Button>
+        </div>
+      </form>
+    </Card>
+  )
+}
+
 function ProfileForm({ current, student, pending, history, fileRef, onSave }: { current: Editable; student?: Student; pending?: ProfileChange; history: ProfileChange[]; fileRef: React.RefObject<HTMLInputElement | null>; onSave: (e: Editable, reason: string) => void }) {
   const { db, session, update, toast } = useStore()
   const base: Editable = pending ? { ...current, ...(pending.changes as Partial<Editable>) } : current
   const [f, setF] = useState<Editable>(base)
   const [reason, setReason] = useState(pending?.reason ?? '')
-  const [pw, setPw] = useState({ cur: '', next: '', confirm: '' })
   if (!session) return null
   const role = session.role
   const me = { role, userId: session.userId }
@@ -270,19 +314,7 @@ function ProfileForm({ current, student, pending, history, fileRef, onSave }: { 
               </Button>
             </div>
           </Card>
-          <Card title="Password" actions={<ShieldCheck size={18} className="muted" />}>
-            <div className="form-grid">
-              <Field label="Current password">{(id) => <input id={id} className="input" type="password" autoComplete="current-password" value={pw.cur} onChange={(e) => setPw({ ...pw, cur: e.target.value })} />}</Field>
-              <span />
-              <Field label="New password" hint="At least 8 characters" error={pw.next && pw.next.length < 8 ? 'Too short' : null}>{(id) => <input id={id} className="input" type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} />}</Field>
-              <Field label="Confirm" error={pw.confirm && pw.confirm !== pw.next ? 'Does not match' : null}>{(id) => <input id={id} className="input" type="password" autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} />}</Field>
-            </div>
-            <div className="row gap-s mt">
-              <span className="muted tiny">Demo mode: sign-in accepts any password.</span>
-              <span className="spacer" />
-              <Button variant="secondary" icon={<Lock size={16} />} disabled={!pw.cur || pw.next.length < 8 || pw.next !== pw.confirm} onClick={() => { setPw({ cur: '', next: '', confirm: '' }); toast('Password updated') }}>Change password</Button>
-            </div>
-          </Card>
+          <PasswordCard personal={[f.name, f.email.split('@')[0]]} />
         </div>
       </div>
     </>

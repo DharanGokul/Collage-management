@@ -2,6 +2,13 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Building2, Plus, ExternalLink, Ban, PlayCircle, Trash2, LogOut, Search, GraduationCap, Users, ShieldCheck, Globe, Wallet, Copy } from 'lucide-react'
 import { Badge, Button, Card, Empty, Field, Modal, Stat } from '../../components/ui'
+import { AUTH_DEMO, DEMO_PASSWORD, resendOtp, signIn, verifyOtp } from '../../auth/service'
+import { PLATFORM_SCOPE, SUPER_ADMIN_EMAIL, platformDirectory } from '../../auth/platform'
+import { clearSession, loadSession, saveSession } from '../../auth/session'
+import { AuthError, type AuthSession } from '../../auth/types'
+import { formatSeconds } from '../../auth/policy'
+import { DemoMailbox, PasswordField } from '../auth/parts'
+import { OtpStep, type OtpChallengeInfo } from '../auth/OtpStep'
 import { ThemeToggle } from '../../components/Layout'
 import Toaster from '../../components/Toaster'
 import { useStore, provisionTenant, readTenantDb, deleteTenantData } from '../../store/AppStore'
@@ -15,48 +22,70 @@ import { formatDate, formatMoney, isValidEmail } from '../../lib/utils'
  * name, its own admin login, branding and data.
  */
 
-const SUPER_KEY = 'cms:super'
-export const SUPER_ADMIN_EMAIL: string = import.meta.env.VITE_SUPER_ADMIN_EMAIL || 'super@campusone.app'
 const PLANS: Record<TenantPlan, { label: string; students: number; price: number }> = {
   starter: { label: 'Starter', students: 500, price: 4999 },
   growth: { label: 'Growth', students: 3000, price: 14999 },
   enterprise: { label: 'Enterprise', students: Infinity, price: 39999 },
 }
 
-const isSuper = () => {
-  try {
-    return sessionStorage.getItem(SUPER_KEY) === '1'
-  } catch {
-    return false
-  }
-}
+const isSuper = () => loadSession(PLATFORM_SCOPE)?.role === 'super'
 
 export function SuperLogin() {
   const nav = useNavigate()
   const [email, setEmail] = useState(SUPER_ADMIN_EMAIL)
-  const [password, setPassword] = useState('demo1234')
+  const [password, setPassword] = useState(AUTH_DEMO ? DEMO_PASSWORD : '')
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [challenge, setChallenge] = useState<OtpChallengeInfo | null>(null)
+  const dir = useMemo(() => platformDirectory(), [])
   if (isSuper()) return <Navigate to="/super" replace />
-  const submit = (e: FormEvent) => {
+
+  const enter = (s: AuthSession) => {
+    saveSession(PLATFORM_SCOPE, s, false)
+    nav('/super', { replace: true })
+  }
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (email.trim().toLowerCase() !== SUPER_ADMIN_EMAIL) return setError('Not a platform administrator account.')
-    if (password.length < 4) return setError('Enter your password (any 4+ characters in this demo).')
-    sessionStorage.setItem(SUPER_KEY, '1')
-    nav('/super')
+    if (busy) return
+    setError(null)
+    if (!email.trim() || !password) return setError('Enter your email and password.')
+    setBusy(true)
+    try {
+      const res = await signIn(dir, { role: 'super', identifier: email, password, remember: false, deviceToken: null })
+      if (res.status === 'ok') return enter(res.session)
+      if (res.status === 'otp') return setChallenge(res)
+      setError('This account needs to be activated first.')
+    } catch (err) {
+      setError(err instanceof AuthError ? err.message + (err.retryAfter ? ` Try again in ${formatSeconds(err.retryAfter)}.` : '') : 'Could not sign in.')
+    } finally {
+      setBusy(false)
+    }
   }
   return (
     <div className="super-login">
       <div className="login-top"><ThemeToggle /></div>
-      <form className="login-card" onSubmit={submit} noValidate>
+      <div className="login-card auth-card">
         <div className="login-card-logo"><span className="brand-mark super-mark" style={{ width: 44, height: 44 }}><ShieldCheck size={22} /></span></div>
-        <h2>Platform console</h2>
-        <p className="muted">Super admin access for {PLATFORM_DOMAIN}</p>
-        <Field label="Email">{(id) => <input id={id} className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />}</Field>
-        <Field label="Password">{(id) => <input id={id} type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />}</Field>
-        {error && <div className="alert alert-error" role="alert">{error}</div>}
-        <Button type="submit" className="w-full">Sign in</Button>
-        <p className="tiny center"><Link to="/login" className="link">← Back to college login</Link></p>
-      </form>
+        {challenge ? (
+          <OtpStep
+            challenge={challenge}
+            onVerify={async (code) => enter((await verifyOtp(dir, { challengeId: challenge.challengeId, code, trustDevice: false })).session)}
+            onResend={() => resendOtp(dir, challenge.challengeId)}
+            onBack={() => setChallenge(null)}
+          />
+        ) : (
+          <form className="stack" onSubmit={submit} noValidate>
+            <div><h2>Platform console</h2><p className="muted">Super admin access for {PLATFORM_DOMAIN}</p></div>
+            <Field label="Email">{(id) => <input id={id} className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} />}</Field>
+            <PasswordField label="Password" value={password} onChange={setPassword} autoComplete="current-password" />
+            {error && <div className="alert alert-error" role="alert">{error}</div>}
+            <Button type="submit" className="w-full" loading={busy}>Sign in</Button>
+            {AUTH_DEMO && <p className="tiny muted center">Demo mode · password <code>{DEMO_PASSWORD}</code> · the code appears in the Demo inbox</p>}
+            <p className="tiny center"><Link to="/login" className="link">← Back to college login</Link></p>
+          </form>
+        )}
+      </div>
+      {AUTH_DEMO && <DemoMailbox scope={PLATFORM_SCOPE} />}
     </div>
   )
 }
@@ -119,7 +148,7 @@ export function SuperConsole() {
         </div>
         <span className="spacer" />
         <ThemeToggle />
-        <Button variant="ghost" className="collapse-sm" aria-label="Sign out" icon={<LogOut size={16} />} onClick={() => { sessionStorage.removeItem(SUPER_KEY); nav('/super/login') }}>Sign out</Button>
+        <Button variant="ghost" className="collapse-sm" aria-label="Sign out" icon={<LogOut size={16} />} onClick={() => { clearSession(PLATFORM_SCOPE); nav('/super/login') }}>Sign out</Button>
       </header>
       <main className="content">
         <div className="page-header">

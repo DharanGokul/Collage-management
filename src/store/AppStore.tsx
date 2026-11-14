@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { AppNotification, Database, EmailLog, Role, Session } from '../types'
+import type { AppNotification, Database, EmailLog, Session } from '../types'
 import { createSeed } from '../lib/seed'
 import { seedEvents, seedTickets } from '../lib/seedCampus'
 import { seedOperations } from '../lib/seedOps'
@@ -7,11 +7,13 @@ import { applyTheme } from '../lib/theme'
 import { getTenant, portalUrl, resolveTenant, upsertTenant, type ResolvedTenant, type TenantPlan } from '../lib/tenant'
 import { sendEmail, validateEmailSettings, type OutgoingEmail } from '../lib/email'
 import { renderTemplate, uid } from '../lib/utils'
+import { clearSession, loadSession, saveSession } from '../auth/session'
+import { isSessionValid, recordSignOut } from '../auth/service'
+import type { AuthSession } from '../auth/types'
 
 const SCHEMA_VERSION = 3
 const EMAIL_CONCURRENCY = 8
 const dbKey = (t: string) => `cms:db:${t}`
-const sessionKey = (t: string) => `cms:session:${t}`
 
 /** v1 → v2: add events/exams and help-desk tickets to existing colleges. */
 function migrate(db: Database): Database {
@@ -83,7 +85,8 @@ interface Store {
   tenant: ResolvedTenant
   session: Session | null
   update: (fn: (draft: Database) => void) => void
-  login: (role: Role, userId: string) => void
+  /** Called by the sign-in pages once the auth service has issued a session. */
+  startSession: (s: AuthSession, remember: boolean) => void
   logout: () => void
   toast: (text: string, kind?: Toast['kind']) => void
   toasts: Toast[]
@@ -103,12 +106,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const suspended = useMemo(() => getTenant(tenant.id)?.status === 'suspended', [tenant.id])
   const [db, setDb] = useState<Database>(() => loadDb(tenant))
   const [session, setSession] = useState<Session | null>(() => {
-    try {
-      const raw = sessionStorage.getItem(sessionKey(tenant.id))
-      return raw ? (JSON.parse(raw) as Session) : null
-    } catch {
-      return null
-    }
+    const s = loadSession(tenant.id)
+    return s && s.role !== 'super' && isSessionValid(tenant.id, s) ? (s as Session) : null
   })
   const [toasts, setToasts] = useState<Toast[]>([])
   const [storageError, setStorageError] = useState<string | null>(null)
@@ -177,28 +176,33 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [])
   const dismissToast = useCallback((id: string) => setToasts((t) => t.filter((x) => x.id !== id)), [])
 
-  const login = useCallback(
-    (role: Role, userId: string) => {
-      const d = dbRef.current
-      const name =
-        role === 'admin'
-          ? d.adminProfile?.name || 'Administrator'
-          : role === 'staff'
-            ? (d.staff.find((s) => s.id === userId)?.name ?? 'Staff')
-            : role === 'accountant'
-              ? (d.accountants.find((s) => s.id === userId)?.name ?? 'Accounts')
-              : (d.students.find((s) => s.id === userId)?.name ?? 'Student')
-      const s: Session = { role, userId, name }
-      sessionStorage.setItem(sessionKey(tenant.id), JSON.stringify(s))
-      setSession(s)
+  const startSession = useCallback(
+    (s: AuthSession, remember: boolean) => {
+      if (s.role === 'super') return
+      saveSession(tenant.id, s, remember)
+      setSession(s as Session)
     },
     [tenant.id],
   )
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem(sessionKey(tenant.id))
+    if (session?.aid) recordSignOut(tenant.id, session.aid)
+    clearSession(tenant.id)
     setSession(null)
-  }, [tenant.id])
+  }, [tenant.id, session?.aid])
+
+  // End the session when it expires, without waiting for a click.
+  useEffect(() => {
+    if (!session?.exp) return
+    const ms = session.exp - Date.now()
+    if (ms <= 0) return clearSessionNow()
+    const t = setTimeout(clearSessionNow, Math.min(ms, 2_147_000_000))
+    return () => clearTimeout(t)
+    function clearSessionNow() {
+      clearSession(tenant.id)
+      setSession(null)
+    }
+  }, [session?.exp, tenant.id])
 
   const sendBulkEmail = useCallback(
     async (job: EmailJob) => {
@@ -247,8 +251,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [tenant])
 
   const value = useMemo<Store>(
-    () => ({ db, tenant, session, update, login, logout, toast, toasts, dismissToast, sendBulkEmail, resetDemo, storageError, suspended }),
-    [db, tenant, session, update, login, logout, toast, toasts, dismissToast, sendBulkEmail, resetDemo, storageError, suspended],
+    () => ({ db, tenant, session, update, startSession, logout, toast, toasts, dismissToast, sendBulkEmail, resetDemo, storageError, suspended }),
+    [db, tenant, session, update, startSession, logout, toast, toasts, dismissToast, sendBulkEmail, resetDemo, storageError, suspended],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
