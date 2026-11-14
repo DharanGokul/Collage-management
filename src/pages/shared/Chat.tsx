@@ -99,7 +99,7 @@ export default function ChatPage() {
                       </span>
                       <span className="row gap-s" style={{ flexWrap: 'nowrap' }}>
                         <span className="muted tiny ellipsis" style={{ flex: 1 }}>
-                          {last ? `${c.kind === 'group' && memberKey(last.from) !== memberKey(sessionMember(session)) ? last.from.name.split(' ')[0] + ': ' : memberKey(last.from) === memberKey(sessionMember(session)) ? 'You: ' : ''}${last.text}` : c.topic || 'No messages yet'}
+                          {last ? `${c.kind === 'group' && memberKey(last.from) !== memberKey(sessionMember(session)) ? last.from.name.replace(/^(Dr|Prof|Ms|Mr|Mrs)\.\s*/i, '').split(' ')[0] + ': ' : memberKey(last.from) === memberKey(sessionMember(session)) ? 'You: ' : ''}${last.text}` : c.topic || 'No messages yet'}
                         </span>
                         {n > 0 && <span className="count-badge" style={{ minWidth: 22, height: 22, fontSize: 11 }}>{n}</span>}
                       </span>
