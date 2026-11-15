@@ -81,7 +81,20 @@ Plan labels now read "up to 3,000 students"; the over-limit note and revenue til
 
 ## 3. Test results (final run, this commit)
 
-_The final full run is in progress as this commit is made; the exact numbers are added in the next commit. Last confirmed results before it started: functional suite 62/62 at 1440, 768 and 375px; responsive audit 263 combinations with 0 problems; 35 unit tests; lint and type-check clean._
+Run on the final code (15 November 2026), after all changes in this document:
+
+| Suite | Result |
+|---|---|
+| Type-check, lint (zero warnings), unit tests | clean · **35/35** unit tests |
+| Functional, 1440×900 | **62/62** |
+| Functional, 768×1024 | **62/62** |
+| Functional, 375×812 | **62/62** |
+| Responsive audit (every route × 6 viewports, sheets and dialogs) | **263 combinations, 0 layout problems**; no text under 11px on phones |
+| Multi-window live updates (4 people signed in at once: request → HOD → requester, chat, profile changes, leave, bills, notifications) | **13/13**, no page errors |
+| Route smoke test (every route of every role) | no errors |
+| Sign-in flows (one-time code, lockout, no user enumeration, forgot password by email and by roll number, email verification, trusted browser, last-role memory, platform sign-in) | **15/15** |
+| Custom domain (DNS records for root domain and sub-domain, verification, no platform links on the college's domain) | **7/7** |
+| Custom domain over real `https://` origins (secure sign-in, emailed link base, `www`, http → https redirect) | **6/6** |
 
 How to run: `npm run check` (type-check, lint, unit tests) and the browser suites described in the README. Browser tests use a preload that switches the one-time code off for the default college so scripted logins stay simple; the real code flow is covered separately by the auth suite.
 
