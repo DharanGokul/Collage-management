@@ -4,10 +4,12 @@ Prepared 14 Nov 2026 by the market needs manager role. Every external claim carr
 
 ## 1. Executive summary
 
+> **Correction (added after the review, verified in the running app).** This report originally ranked "make demo and report numbers consistent" as the first roadmap item, after four screens appeared to show four different "fees collected" totals. That was a reading error: the figures were captured while the KPI numbers were still counting up (the dashboard briefly showed "7%" beside ₹25,35,000). Once the animation finishes, the dashboard, the Fees page, admin Finance reports and accountant Reports all show exactly ₹25,35,000, which equals the sum of the 39 successful payments. The accountant Overview shows ₹18,20,000, labelled "Collected this month", which is a different period. The real problem was that money figures passed through values that were never true while animating; money is no longer animated. Roadmap item 1 and the matching quick win below are withdrawn.
+
 1. **Where the product is strong.** It already covers the day-to-day running of a self-financing college unusually well for a prototype: four role portals, HOD approvals, fee collection with late fees, attendance with the 75% rule, timetable clash detection, a help desk with anonymous complaints, and an accounts module (GST/TDS bills, bank reconciliation, FY reports). Of the products I could verify, this accounts-office depth is the least common feature among college-focused ERPs, but I could not prove competitors lack it (see section 2).
 2. **Where it is not yet sellable.** It is a front-end prototype. Data lives in browser storage, payment, email, SMS, custom-domain TLS and role enforcement are simulated or UI-only, and there is no audit log, no backup service and no stated data location. A buyer who asks "where is our data and who can see it" cannot be answered today. The DPDP Rules were notified on 14 Nov 2025 and most duties apply about 18 months later (about May 2027) [S12, secondary sources], so that question will be asked in every serious sale.
 3. **Biggest product gaps against demand.** Marks/results and exam cell (needed by autonomous and engineering colleges, much less by affiliated colleges whose university runs exams), parent portal with DLT-registered SMS/WhatsApp, scholarships/instalments, NAAC/NIRF/AISHE data packs, ABC/APAAR support, a confidential anti-ragging/ICC case workflow, Tally export, payroll.
-4. **Recommended order.** Release 1 "Trust": backend, real authentication, audit log, real payment gateway, DPDP kit, fix demo data consistency. Release 2 "Fees and families": concessions/instalments, parent portal with SMS/WhatsApp, ICC/anti-ragging workflow, ABC/APAAR fields, Tally export. Release 3 "Academics and accreditation": marks and results, exam cell, NAAC/NIRF/AISHE packs.
+4. **Recommended order.** Release 1 "Trust": backend, real authentication, audit log, real payment gateway, DPDP kit. Release 2 "Fees and families": concessions/instalments, parent portal with SMS/WhatsApp, ICC/anti-ragging workflow, ABC/APAAR fields, Tally export. Release 3 "Academics and accreditation": marks and results, exam cell, NAAC/NIRF/AISHE packs.
 5. **Go-to-market.** Start with private self-financing affiliated arts and science colleges (fee, attendance and accounts pain, no need for a marks engine), then engineering and autonomous colleges once marks and accreditation packs ship. Lead with the accounts-office and HOD-approval story, not "a college ERP".
 6. **Pricing.** I could not find any citable Indian college-ERP price, so I cannot say the three plans are "right". I can say the structure has two weaknesses: plans differ only by student cap (no feature or support difference), and the jump from 500 to 3,000 students triples the price. Recommendations are in section 9.
 7. **Fixes made in code now** (copy only): plan names in the onboarding form now read "up to 3,000 students" and "unlimited students"; the over-limit warning reads "over the 500-student limit"; the revenue tile says "per month"; the Taxes note no longer says all education fees are exempt from GST.
@@ -147,7 +149,7 @@ Scale: Reach 1-10 (share of target colleges this matters to within a year); Impa
 
 | Rank | Item | R | I | C | E | RICE | Why these scores |
 |---|---|---|---|---|---|---|---|
-| 1 | Make demo and report numbers consistent (one source of truth) | 10 | 1 | 0.9 | 0.25 | 36.0 | Seen to break in the demo; tiny effort; every buyer sees it |
+| 1 | ~~Make demo and report numbers consistent~~ **Withdrawn: totals verified consistent (see correction)** | – | – | – | – | – | Based on a reading error; money figures no longer animate |
 | 2 | Real payment gateway (Razorpay/PayU) with webhooks, settlement reconciliation | 9 | 3 | 0.85 | 2 | 11.5 | Fee collection is the daily money flow; gateway fee about 2% plus GST on Razorpay's standard plan per its own page [S16] |
 | 3 | Tally / accounting export | 7 | 2 | 0.8 | 1 | 11.2 | Cheap; auditors expect it (from the repo's own analysis; verify with accountants) |
 | 4 | Anti-ragging and ICC confidential case workflow | 8 | 2 | 0.7 | 1.5 | 7.5 | UGC regulation [S14]; builds on help desk |
@@ -164,14 +166,14 @@ Scale: Reach 1-10 (share of target colleges this matters to within a year); Impa
 | 15 | Admissions CRM | 6 | 2 | 0.5 | 4 | 1.5 | Large, crowded |
 
 ### Three releases
-- **Release 1 "Trust and money" (start now):** items 12, 1, 2, 7, 3. Exit test: a college can pay through a real gateway, the data is on a stated India host with backups and an audit log, and every screen agrees.
+- **Release 1 "Trust and money" (start now):** items 12, 2, 7, 3 (item 1 withdrawn). Exit test: a college can pay through a real gateway, the data is on a stated India host with backups and an audit log, and every screen agrees.
 - **Release 2 "Fees and families":** items 5, 9, 4, 6. Plus a basic SMS alert on fee due and absence once DLT templates exist.
 - **Release 3 "Academics and accreditation":** items 11, 8, 10, then 13 for engineering.
 - **Later:** payroll, admissions, library/hostel/transport via partners.
 
 ### Quick wins
 Shipped now (copy only): plan labels and over-limit text in the console; revenue tile text; GST exemption wording on Taxes.
-Ship next (small, no new feature): seed the demo data so all totals agree; hide "All present" when there are no classes; show plan limits next to the plan selector in the console row; add a "Trust" page stating hosting, backup and audit-log intentions once real.
+Ship next (small, no new feature): hide "All present" when there are no classes; show plan limits next to the plan selector in the console row; add a "Trust" page stating hosting, backup and audit-log intentions once real.
 
 ## 9. Positioning and pricing review
 
@@ -234,7 +236,7 @@ Entries from search summaries (pages not opened). "Not shown" means I did not se
 4. **Evidence risk:** all competitor information is second-hand; real prices and features may differ.
 5. **Adoption risk:** faculty resistance and training gaps are the recurring cited failure cause [S18]; the product needs onboarding, training and migration support priced in.
 6. **Cost-to-serve:** SMS, WhatsApp, gateway and email costs scale with usage and are not in the plan price.
-7. **Single-tenant demo:** multi-college behaviour is untested beyond one tenant.
+7. **Multi-college isolation is only browser-deep:** the admin review provisioned two colleges and confirmed neither could see the other's data, but both live in browser storage. Real isolation needs the database-level controls in `docs/backend-plan.md` §3.
 8. **Pricing risk:** no benchmark; the 500 to 3,000 student step may lose mid-sized colleges.
 
 ## 12. Source list
