@@ -91,3 +91,68 @@ export function tint(hex: string, amount: number) {
   const [r, g, b] = hexToRgb(hex)
   return rgbToHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount)
 }
+
+/* ---------- Contrast helpers for the brand-colour check (WCAG 2.2 1.4.3 / 1.4.11) ---------- */
+
+export function relLuminance(hex: string) {
+  const [r, g, b] = hexToRgb(hex).map((v) => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+export function contrastOf(a: string, b: string) {
+  const [hi, lo] = [relLuminance(a), relLuminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/**
+ * A brand colour "works unchanged" in both themes when white text on it reaches 4.5:1
+ * (luminance <= 0.183) and it still reads as a 3:1 shape on the Noir page (luminance >= 0.12).
+ * Colours outside that band are still fully usable: applyPalette lightens or darkens the
+ * text/indicator variants. The band only tells the admin where the colour looks the same everywhere.
+ */
+const SAFE_LUM: [number, number] = [0.12, 0.183]
+
+export interface BrandReport {
+  buttonText: 'white' | 'black'
+  buttonRatio: number
+  dayRatio: number
+  nightRatio: number
+  inBand: boolean
+  /** 'dark' blends into the Noir page, 'light' into the Day page; both are drawn with an outline and adjusted variants. */
+  extreme: 'dark' | 'light' | null
+  suggestion: string | null
+}
+
+export function brandReport(hex: string): BrandReport {
+  const white = contrastOf(hex, '#ffffff')
+  const black = contrastOf(hex, '#000000')
+  const lum = relLuminance(hex)
+  const inBand = lum >= SAFE_LUM[0] && lum <= SAFE_LUM[1]
+  let suggestion: string | null = null
+  if (!inBand) {
+    // Keep hue and saturation; move HSL lightness the smallest distance that lands in the band.
+    const { h, s, l } = hexToHsl(hex)
+    let best = Infinity
+    for (let k = 0; k <= 200; k++) {
+      const cand = k / 200
+      const c = hslToHex(h, s, cand)
+      const cl = relLuminance(c)
+      if (cl >= SAFE_LUM[0] + 0.005 && cl <= SAFE_LUM[1] - 0.005 && Math.abs(cand - l) < best) {
+        best = Math.abs(cand - l)
+        suggestion = c
+      }
+    }
+  }
+  return {
+    buttonText: white >= 4.5 ? 'white' : 'black',
+    buttonRatio: white >= 4.5 ? white : black,
+    dayRatio: contrastOf(hex, '#e6e9e7'),
+    nightRatio: contrastOf(hex, '#131313'),
+    inBand,
+    extreme: lum < 0.015 ? 'dark' : lum > 0.5 ? 'light' : null,
+    suggestion,
+  }
+}

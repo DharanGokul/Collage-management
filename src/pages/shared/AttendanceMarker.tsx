@@ -158,9 +158,9 @@ export default function AttendanceMarker({ subjects, markedBy }: { subjects: Sub
                     <strong>{s.name}</strong>
                     <small className="mono muted">{s.rollNo}</small>
                   </div>
-                  <div className="mark-group" role="radiogroup" aria-label={`Attendance for ${s.name}`}>
+                  <div className="mark-group" role="group" aria-label={`Attendance for ${s.name}`}>
                     {MARKS.map((m) => (
-                      <button key={m.id} role="radio" aria-checked={marks[s.id] === m.id} title={m.label} className={`mark mark-${m.id} ${marks[s.id] === m.id ? 'on' : ''}`} onClick={() => setMarks((p) => ({ ...p, [s.id]: m.id }))}>
+                      <button key={m.id} aria-pressed={marks[s.id] === m.id} aria-label={m.label} title={m.label} className={`mark mark-${m.id} ${marks[s.id] === m.id ? 'on' : ''}`} onClick={() => setMarks((p) => ({ ...p, [s.id]: m.id }))}>
                         {m.id}
                       </button>
                     ))}

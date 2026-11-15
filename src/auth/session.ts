@@ -15,6 +15,8 @@ export function loadSession(scope: string): AuthSession | null {
       const s = JSON.parse(raw) as AuthSession
       if (s?.exp && s.exp > Date.now() && s.aid) return s
       store.removeItem(key(scope))
+      // Remember why the person landed on the sign-in page, so it can say so once.
+      if (s?.exp && s.exp <= Date.now()) sessionStorage.setItem(`cms:expired:${scope}`, '1')
     } catch {
       /* unreadable → treat as signed out */
     }
@@ -38,5 +40,17 @@ export function clearSession(scope: string) {
     } catch {
       /* ignore */
     }
+  }
+}
+
+/** True once after a session timed out, so the sign-in page can explain why the user was signed out. */
+export function takeExpiredNotice(scope: string): boolean {
+  try {
+    const k = `cms:expired:${scope}`
+    const v = sessionStorage.getItem(k)
+    sessionStorage.removeItem(k)
+    return !!v
+  } catch {
+    return false
   }
 }

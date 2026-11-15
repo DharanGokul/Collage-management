@@ -73,7 +73,7 @@ function Report() {
         {sessions.length === 0 ? (
           <Empty title="No attendance in this period" />
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Attendance by student and subject">
             <table className="table">
               <thead>
                 <tr>
@@ -124,6 +124,7 @@ function LowAttendance() {
   const alertAll = async () => {
     const tpl = db.templates.find((t) => t.id === 'tpl-low-attendance')
     if (!tpl) return toast('Low attendance template missing', 'error')
+    if (!confirm(`Email ${rows.length} student${rows.length === 1 ? '' : 's'} who are below ${threshold}% attendance?`)) return
     setSending(true)
     const r = await sendBulkEmail({ subject: tpl.subject, body: tpl.body, recipients: rows.map(({ s, sum }) => ({ email: s.email, vars: { name: s.name, student_name: s.name, attendance_pct: `${sum.pct}%` } })) })
     setSending(false)
@@ -138,7 +139,8 @@ function LowAttendance() {
       actions={
         <>
           <label className="row gap-s tiny">Threshold <input type="number" className="input sm" style={{ width: 70 }} min={1} max={100} value={threshold} onChange={(e) => setThreshold(Math.min(100, Math.max(1, +e.target.value || 75)))} />%</label>
-          <Button size="sm" icon={<Send size={14} />} disabled={!rows.length} loading={sending} onClick={alertAll}>Email all</Button>
+          <Button size="sm" variant="secondary" icon={<Download size={14} />} disabled={!rows.length} onClick={() => downloadCSV(`attendance-below-${threshold}.csv`, [['Roll No', 'Name', 'Email', 'Class', 'Attended', 'Total', 'Absent', 'Attendance %'], ...rows.map(({ s, sum }) => [s.rollNo, s.name, s.email, classLabel(studentClassKey(s)), sum.present + sum.late, sum.total, sum.absent, sum.pct])])}>CSV</Button>
+          <Button size="sm" icon={<Send size={14} />} disabled={!rows.length} loading={sending} onClick={alertAll}>{rows.length ? `Email all (${rows.length})` : 'Email all'}</Button>
         </>
       }
     >

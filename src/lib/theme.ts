@@ -57,8 +57,14 @@ export function applyPalette(hex: string, secondaryHex?: string) {
   root.style.setProperty('--accent-rgb', `${r} ${g} ${bl}`)
   root.style.setProperty('--accent-pressed', mix(accent, [0, 0, 0], 0.32))
   root.style.setProperty('--on-accent', contrastText(accent))
-  root.style.setProperty('--accent-text-dark', accent === DEFAULT_ACCENT ? '#e8a1b0' : ensureContrast(accent, '#141414', 7, [255, 255, 255]))
-  root.style.setProperty('--accent-text-light', ensureContrast(accent, '#f4f2f2', 4.5, [0, 0, 0]))
+  root.style.setProperty('--accent-text-dark', accent === DEFAULT_ACCENT ? '#e8a1b0' : ensureContrast(accent, '#141414', 8, [255, 255, 255]))
+  // Text targets sit above 4.5 because accent text is also drawn on tinted (accent-soft) badges and tabs.
+  root.style.setProperty('--accent-text-light', ensureContrast(accent, '#f4f2f2', 6, [0, 0, 0]))
+  // Non-text use (chart bars, indicators, outlines) needs 3:1 against the page in each theme (WCAG 1.4.11).
+  root.style.setProperty('--accent-ui-dark', ensureContrast(accent, '#131313', 3.2, [255, 255, 255]))
+  root.style.setProperty('--accent-ui-light', ensureContrast(accent, '#e6e9e7', 3.2, [0, 0, 0]))
+  // Deep brand shade for panels that carry white text on a gradient (event cards, up-next).
+  root.style.setProperty('--accent-deep', ensureContrast(accent, '#ffffff', 8, [0, 0, 0]))
 
   // Secondary accent (derived by harmony unless a custom one is set)
   const sec = secondaryHex && HEX_RE.test(secondaryHex) ? secondaryHex.toLowerCase() : resolveSecondary(accent, 'analogous', null)
@@ -66,8 +72,11 @@ export function applyPalette(hex: string, secondaryHex?: string) {
   root.style.setProperty('--secondary', sec)
   root.style.setProperty('--secondary-rgb', `${sr} ${sg} ${sb}`)
   root.style.setProperty('--on-secondary', contrastText(sec))
-  root.style.setProperty('--secondary-text-dark', ensureContrast(sec, '#141414', 7, [255, 255, 255]))
-  root.style.setProperty('--secondary-text-light', ensureContrast(sec, '#f4f2f2', 4.5, [0, 0, 0]))
+  root.style.setProperty('--secondary-text-dark', ensureContrast(sec, '#141414', 8, [255, 255, 255]))
+  root.style.setProperty('--secondary-text-light', ensureContrast(sec, '#f4f2f2', 6, [0, 0, 0]))
+  root.style.setProperty('--secondary-ui-dark', ensureContrast(sec, '#131313', 3.2, [255, 255, 255]))
+  root.style.setProperty('--secondary-ui-light', ensureContrast(sec, '#e6e9e7', 3.2, [0, 0, 0]))
+  root.style.setProperty('--secondary-deep', ensureContrast(sec, '#ffffff', 8, [0, 0, 0]))
   // Day-mode background washes follow the brand
   root.style.setProperty('--tint-1', tint(sec, 0.8))
   root.style.setProperty('--tint-2', tint(accent, 0.86))

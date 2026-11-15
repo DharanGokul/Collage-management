@@ -79,7 +79,7 @@ export default function Bills() {
             <div className="table-wrap print-area">
               <h3 className="print-only">{db.branding.collegeName} — Bills · {periodLabel(period)}</h3>
               <table className="table">
-                <thead><tr><th>Bill</th><th className="hide-sm">Vendor</th><th className="hide-sm">Category</th><th className="right">GST</th><th className="right hide-sm">TDS</th><th className="right">Net payable</th><th>Status</th><th className="right" /></tr></thead>
+                <thead><tr><th>Bill</th><th className="hide-sm">Vendor</th><th className="hide-sm">Category</th><th className="right">GST</th><th className="right hide-sm">TDS</th><th className="right">Net payable</th><th>Status</th><th className="right"><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   {paged.items.map((b) => {
                     const t = billTotals(b)
@@ -289,7 +289,7 @@ function Vendors() {
     <Card pad={false} actions={<Button size="sm" icon={<Plus size={14} />} onClick={() => setV({ id: '', name: '', gstin: '', pan: '', state: db.tax.stateCode, email: '', phone: '' })}>Add vendor</Button>} title="Vendors">
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>Vendor</th><th className="hide-sm">GSTIN</th><th className="hide-sm">PAN</th><th className="right">Paid (all time)</th><th /></tr></thead>
+          <thead><tr><th>Vendor</th><th className="hide-sm">GSTIN</th><th className="hide-sm">PAN</th><th className="right">Paid (all time)</th><th><span className="sr-only">Actions</span></th></tr></thead>
           <tbody>
             {db.vendors.map((x) => (
               <tr key={x.id}>

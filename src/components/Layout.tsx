@@ -479,7 +479,7 @@ export default function Layout() {
 
   const bell = (
     <div className="pop-wrap" ref={bellRef}>
-      <button className="round-btn" aria-label={`Notifications${notices.length ? ` (${notices.length})` : ''}`} aria-expanded={bellOpen} onClick={() => setBellOpen((o) => !o)}>
+      <button className="round-btn" aria-label={notices.length ? `${notices.length} unread notifications` : 'Notifications'} aria-expanded={bellOpen} onClick={() => setBellOpen((o) => !o)}>
         <Bell size={18} />
         {notices.length > 0 && <span className="count-dot" aria-hidden>{notices.length}</span>}
       </button>
@@ -506,6 +506,16 @@ export default function Layout() {
 
   return (
     <div className={`shell ${scrolled ? 'scrolled' : ''}`}>
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(e) => {
+          e.preventDefault() // HashRouter owns the hash, so move focus instead of navigating
+          document.getElementById('main-content')?.focus()
+        }}
+      >
+        Skip to main content
+      </a>
       {/* Desktop top bar */}
       <header className="topbar">
         <Link to={`/${session.role}`} className="brand" title="Home">
@@ -575,7 +585,7 @@ export default function Layout() {
         </button>
       </header>
 
-      <div className="main">
+      <main className="main" id="main-content" tabIndex={-1}>
         {storageError && (
           <div className="banner banner-warn">
             <AlertTriangle size={16} /> {storageError}
@@ -586,7 +596,7 @@ export default function Layout() {
             <Outlet />
           </PageEnter>
         </Suspense>
-      </div>
+      </main>
 
       <TabBar
         home={`/${session.role}`}

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { pillRect, useLiquidBlob, useLiquidHover } from './LiquidNav'
 import { X, CheckCircle2, AlertCircle, Info, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -35,7 +35,7 @@ export function Card({ title, actions, children, className = '', pad = true }: {
     <section className={`card ${className}`}>
       {(title || actions) && (
         <header className="card-head">
-          {title && <h3>{title}</h3>}
+          {title && <h3 aria-level={2}>{title}</h3>}
           {actions && <div className="card-actions">{actions}</div>}
         </header>
       )}
@@ -45,6 +45,11 @@ export function Card({ title, actions, children, className = '', pad = true }: {
 }
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+  const { db } = useStore()
+  // The tab title names the page, so screen-reader users and browser history can tell pages apart (WCAG 2.4.2).
+  useEffect(() => {
+    document.title = `${title} · ${db.branding.collegeName || 'Portal'}`
+  }, [title, db.branding.collegeName])
   return (
     <div className="page-header">
       <div>
@@ -130,6 +135,11 @@ export function overlayOpen(delta: 1 | -1) {
  * is inert and scroll-locked, and the title is announced. Styling stays with the Caesar `.modal*` classes.
  */
 export function Modal({ open, title, onClose, children, footer, wide }: { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
+  // Remember what had focus when the dialog opened so Escape / Close hands it back (keyboard users otherwise land on <body>).
+  const opener = useRef<HTMLElement | null>(null)
+  useLayoutEffect(() => {
+    if (open) opener.current = document.activeElement as HTMLElement | null // runs before Radix moves focus into the dialog
+  }, [open])
   useEffect(() => {
     if (!open) return
     overlayOpen(1)
@@ -142,6 +152,10 @@ export function Modal({ open, title, onClose, children, footer, wide }: { open: 
           <Dialog.Content
             className={`modal ${wide ? 'modal-wide' : ''}`}
             aria-describedby={undefined}
+            onCloseAutoFocus={(e) => {
+              const el = opener.current
+              if (el && el !== document.body && document.contains(el)) { e.preventDefault(); el.focus() }
+            }}
             onOpenAutoFocus={(e) => {
               // Mouse/keyboard: start in the first field. Touch: focus the dialog itself so no soft keyboard pops up.
               e.preventDefault()
@@ -183,10 +197,25 @@ export function Tabs<T extends string>({ value, onChange, items }: { value: T; o
   const { lit, item, group } = useLiquidHover(active)
   useLiquidBlob(ref, ink, lit, pillRect)
   return (
-    <div className="tabs" role="tablist" ref={ref} {...group}>
+    <div
+      className="tabs"
+      role="tablist"
+      ref={ref}
+      {...group}
+      onKeyDown={(e) => {
+        // WAI-ARIA tabs: arrows / Home / End move between tabs (roving tabindex).
+        const k = e.key
+        if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(k)) return
+        e.preventDefault()
+        const n = items.length
+        const next = k === 'Home' ? 0 : k === 'End' ? n - 1 : (Math.max(active, 0) + (k === 'ArrowRight' ? 1 : -1) + n) % n
+        onChange(items[next].id)
+        ref.current?.querySelectorAll<HTMLElement>('[role=tab]')[next]?.focus()
+      }}
+    >
       <span className="tab-ink" ref={ink} aria-hidden />
       {items.map((it, i) => (
-        <button key={it.id} data-liquid role="tab" aria-selected={value === it.id} className={`tab ${value === it.id ? 'active' : ''} ${i === lit ? 'lit' : ''}`} onClick={() => onChange(it.id)} {...item(i)}>
+        <button key={it.id} data-liquid role="tab" tabIndex={value === it.id ? 0 : -1} aria-selected={value === it.id} className={`tab ${value === it.id ? 'active' : ''} ${i === lit ? 'lit' : ''}`} onClick={() => onChange(it.id)} {...item(i)}>
           {it.icon}
           {it.label}
         </button>

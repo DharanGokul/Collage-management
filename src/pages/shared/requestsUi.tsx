@@ -46,7 +46,7 @@ export function RequestCard({ r, actions, compact }: { r: DeptRequest; actions?:
       <div className="req-top">
         <div className="stack-s" style={{ gap: 4, minWidth: 0 }}>
           <span className="spec">{r.ref} · {KIND_LABEL[r.kind]} · {CATEGORY_LABEL[r.category]}</span>
-          <h3 className="ellipsis" style={{ fontSize: 17 }}>{r.title}</h3>
+          <h3 className="ellipsis" aria-level={2} style={{ fontSize: 17 }}>{r.title}</h3>
           <span className="row gap-s tiny muted"><MapPin size={13} /> {r.location} · {r.department} · by {r.requestedBy.name}</span>
         </div>
         <div className="stack-s" style={{ alignItems: 'flex-end', gap: 6 }}>

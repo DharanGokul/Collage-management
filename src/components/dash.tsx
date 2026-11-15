@@ -16,6 +16,10 @@ export interface Kpi { icon: ReactNode; value: ReactNode; label: string; badge?:
 
 export function Greeting({ name, kpis, action }: { name: string; kpis: Kpi[]; action?: ReactNode }) {
   const first = name.replace(/^(Dr|Prof|Ms|Mr|Mrs)\.\s*/i, '').split(' ')[0]
+  const { db } = useStore()
+  useEffect(() => {
+    document.title = `Overview · ${db.branding.collegeName || 'Portal'}`
+  }, [db.branding.collegeName])
   return (
     <section className="greet">
       <h1 className="greet-title">

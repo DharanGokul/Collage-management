@@ -94,7 +94,7 @@ export default function Students() {
           <>
             <Button variant="secondary" icon={<Upload size={16} />} onClick={() => setImporting(true)}>Import CSV</Button>
             <Button variant="secondary" icon={<Download size={16} />} onClick={exportCsv}>Export CSV</Button>
-            <Button icon={<Plus size={16} />} onClick={() => setEditing(blank(db.departments[0]?.code ?? '', db.sections[0] ?? 'A'))}>Add student</Button>
+            <Button icon={<Plus size={16} />} onClick={() => (db.departments.length ? setEditing(blank(db.departments[0].code, db.sections[0] ?? 'A')) : toast('Add a department first: Staff › Departments & HODs', 'error'))}>Add student</Button>
           </>
         }
       />
@@ -114,7 +114,11 @@ export default function Students() {
           </select>
         </div>
         {rows.length === 0 ? (
-          <Empty icon={<GraduationCap />} title="No students match">Try clearing the filters.</Empty>
+          db.students.length === 0 ? (
+          <Empty icon={<GraduationCap />} title="No students yet">Add a student, or import a CSV to bring in a whole class. Add departments first under Staff › Departments &amp; HODs.</Empty>
+        ) : (
+          <Empty icon={<GraduationCap />} title="No students match">Try clearing the search or filters.</Empty>
+        )
         ) : (
           <div className="table-wrap">
             <table className="table">

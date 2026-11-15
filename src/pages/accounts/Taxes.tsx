@@ -129,7 +129,7 @@ function Tds({ period }: { period: Period }) {
         </div>
       </Card>
       <Card title="Challans" pad={false}>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="TDS challans">
           <table className="table">
             <thead><tr><th>Month</th><th>Section</th><th>Challan</th><th>Deposited</th><th className="right">Amount</th></tr></thead>
             <tbody>
@@ -181,7 +181,7 @@ function TaxSettingsForm() {
           <Field label="State code">{(id) => <input id={id} className="input mono" value={t.stateCode} onChange={(e) => setT({ ...t, stateCode: e.target.value.replace(/\D/g, '').slice(0, 2) })} />}</Field>
           <Field label="PAN" error={panOk ? null : 'Format ABCDE1234F'}>{(id) => <input id={id} className="input mono" value={t.pan} onChange={(e) => setT({ ...t, pan: e.target.value.toUpperCase() })} />}</Field>
           <Field label="TAN" error={tanOk ? null : 'Format ABCD12345E'}>{(id) => <input id={id} className="input mono" value={t.tan} onChange={(e) => setT({ ...t, tan: e.target.value.toUpperCase() })} />}</Field>
-          <Field label="Purchase approval limit" span={2} hint="Purchases and bills above this need management approval">{(id) => <input id={id} type="number" min={0} className="input" value={t.procurementApprovalLimit} onChange={(e) => setT({ ...t, procurementApprovalLimit: Math.max(0, +e.target.value) })} />}</Field>
+          <Field label="Purchase approval limit" span={2} hint="Set by management (Admin › Settings › Approval limit). Accounts can see it but not change it, so bills cannot be kept under the limit by editing it.">{(id) => <input id={id} type="number" className="input" value={db.tax.procurementApprovalLimit} readOnly aria-readonly="true" />}</Field>
         </div>
       </Card>
       <Card title="Rates">
@@ -195,7 +195,7 @@ function TaxSettingsForm() {
         <div className="form-grid mt-s">
           {TDS_SECTIONS.map((s) => <Field key={s.id} label={s.id} hint={s.hint}>{(id) => <input id={id} type="number" min={0} max={30} step="0.1" className="input" value={t.tdsRates[s.id] ?? 0} onChange={(e) => setT({ ...t, tdsRates: { ...t.tdsRates, [s.id]: Math.max(0, +e.target.value) } })} />}</Field>)}
         </div>
-        <div className="row mt"><span className="spacer" /><Button disabled={!gstOk || !panOk || !tanOk || JSON.stringify(t) === JSON.stringify(db.tax)} onClick={() => { update((d) => { d.tax = t }); toast('Tax settings saved') }}>Save</Button></div>
+        <div className="row mt"><span className="spacer" /><Button disabled={!gstOk || !panOk || !tanOk || JSON.stringify({ ...t, procurementApprovalLimit: 0 }) === JSON.stringify({ ...db.tax, procurementApprovalLimit: 0 })} onClick={() => { update((d) => { d.tax = { ...t, procurementApprovalLimit: d.tax.procurementApprovalLimit } }); toast('Tax settings saved') }}>Save</Button></div>
       </Card>
     </div>
   )

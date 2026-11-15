@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { Pipette } from 'lucide-react'
-import { hexToHsv, hsvToHex } from '../lib/color'
+import { brandReport, hexToHsv, hsvToHex } from '../lib/color'
 
 const HEX = /^#[0-9a-f]{6}$/i
 type EyeDropperCtor = new () => { open: () => Promise<{ sRGBHex: string }> }
@@ -117,12 +117,42 @@ export default function ColorPicker({ value, onChange, presets = [], label = 'Co
         )}
       </div>
       {!HEX.test(text.startsWith('#') ? text : `#${text}`) && <small className="field-error">Use a 6-digit hex like #6d001a</small>}
+      {HEX.test(value) && <ContrastNote hex={value} onUse={(c) => { const n = hexToHsv(c); emit(n.h, n.s, n.v) }} />}
       {presets.length > 0 && (
         <div className="swatches" role="group" aria-label="Presets">
           {presets.map((c) => (
             <button key={c} type="button" className={`swatch ${value.toLowerCase() === c.toLowerCase() ? 'on' : ''}`} style={{ background: c }} aria-label={`Use ${c}`} onClick={() => { const n = hexToHsv(c); emit(n.h, n.s, n.v) }} />
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+/** Live contrast readout: the text colour buttons get, how the colour sits on each page, and a nearest-safe suggestion. */
+function ContrastNote({ hex, onUse }: { hex: string; onUse: (c: string) => void }) {
+  const r = brandReport(hex)
+  const fmt = (n: number) => `${n.toFixed(1)}:1`
+  const use = r.suggestion && (
+    <button type="button" className="cpick-suggest" onClick={() => onUse(r.suggestion!)}>
+      <i style={{ background: r.suggestion }} aria-hidden /> {r.suggestion}
+    </button>
+  )
+  return (
+    <div className={`cpick-check ${r.extreme ? 'warn' : 'ok'}`} role="status">
+      <span>
+        <strong>{r.buttonText === 'white' ? 'White' : 'Black'} button text: {fmt(r.buttonRatio)}</strong> (needs 4.5:1). On the Day page this colour measures {fmt(r.dayRatio)}, on Night {fmt(r.nightRatio)} (shapes need 3:1).
+      </span>
+      {r.extreme ? (
+        <span>
+          This colour is {r.extreme === 'dark' ? 'almost black' : 'very pale'}, so it blends into the {r.extreme === 'dark' ? 'Night' : 'Day'} page. The portal adds an outline and adjusted text colours, but a mid-tone brand colour reads better.{r.suggestion && <> Closest mid-tone: {use}</>}
+        </span>
+      ) : r.inBand ? (
+        <span>Looks the same in both themes.</span>
+      ) : (
+        <span>
+          Text, charts and indicators are adjusted automatically in each theme, so a deep brand colour like this stays readable.
+        </span>
       )}
     </div>
   )

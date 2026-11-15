@@ -83,7 +83,7 @@ export default function Invoices() {
           <div className="table-wrap print-area">
             <h3 className="print-only">{db.branding.collegeName} — {tab === 'fee' ? 'Fee invoices' : 'Other income invoices'} · {periodLabel(period)}</h3>
             <table className="table">
-              <thead><tr><th>Invoice</th><th>Billed to</th><th className="right hide-sm">GST</th><th className="right">Total</th><th>Status</th><th /></tr></thead>
+              <thead><tr><th>Invoice</th><th>Billed to</th><th className="right hide-sm">GST</th><th className="right">Total</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {paged.items.map((i) => {
                   const t = lineTotals(i.items, i.interState)

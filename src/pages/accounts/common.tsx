@@ -62,7 +62,7 @@ export function LineItemsEditor({ items, onChange, interState, totals = true }: 
     <div className="stack-s">
       <div className="table-wrap">
         <table className="table lines">
-          <thead><tr><th>Description</th><th style={{ width: 80 }}>Qty</th><th style={{ width: 120 }}>Rate</th><th style={{ width: 90 }}>GST %</th><th className="right" style={{ width: 120 }}>Amount</th><th style={{ width: 40 }} /></tr></thead>
+          <thead><tr><th>Description</th><th style={{ width: 80 }}>Qty</th><th style={{ width: 120 }}>Rate</th><th style={{ width: 90 }}>GST %</th><th className="right" style={{ width: 120 }}>Amount</th><th style={{ width: 40 }}><span className="sr-only">Remove line</span></th></tr></thead>
           <tbody>
             {items.map((it, i) => (
               <tr key={i}>

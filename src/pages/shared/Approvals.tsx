@@ -285,6 +285,8 @@ export default function Approvals() {
   }
 
   function decideBill(id: string, approve: boolean, note: string) {
+    const bill = db.bills.find((x) => x.id === id)
+    if (approve && bill && !confirm(`Approve payment of ${formatMoney(billTotals(bill).payable, db.branding.currency)} to ${db.vendors.find((v) => v.id === bill.vendorId)?.name ?? 'the vendor'}? Accounts will be able to pay it.`)) return
     update((d) => {
       const b = d.bills.find((x) => x.id === id)
       if (!b) return

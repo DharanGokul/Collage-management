@@ -21,6 +21,9 @@ export default function CalendarPage() {
   const go = useNavigate()
   const [params, setParams] = useSearchParams()
   const mobile = useIsMobile()
+  useEffect(() => {
+    document.title = `Calendar · ${db.branding.collegeName || 'Portal'}`
+  }, [db.branding.collegeName])
   const now = useNow()
   const isAdmin = session?.role === 'admin'
   const [view, setView] = useState<View>('week')
@@ -477,7 +480,7 @@ function MiniMonth({ anchor, items, weekStart, onPick }: { anchor: Date; items: 
           {days.map((d) => {
             const inWeek = weekStart && d >= weekStart && d < addDays(weekStart, 7)
             return (
-              <button key={d.toISOString()} className={`mini-day ${d.getMonth() !== m.getMonth() ? 'out' : ''} ${inWeek ? 'inweek' : ''} ${sameDay(d, new Date(now)) ? 'today' : ''}`} onClick={() => onPick(d)} aria-label={d.toDateString()}>
+              <button key={d.toISOString()} className={`mini-day ${d.getMonth() !== m.getMonth() ? 'out' : ''} ${inWeek ? 'inweek' : ''} ${sameDay(d, new Date(now)) ? 'today' : ''}`} onClick={() => onPick(d)} aria-label={`${d.getDate()} ${d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', year: 'numeric' })}`}>
                 {d.getDate()}
                 {busy.has(toISODate(d)) && <i />}
               </button>

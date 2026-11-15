@@ -69,7 +69,7 @@ export default function TimetableGrid({
                 return (
                   <td key={day} className={`${day === today ? 'today' : ''} ${slot ? 'filled' : ''} ${info?.warn || matching.length > 1 ? 'warn' : ''}`}>
                     {onCellClick ? (
-                      <button className="tt-cell" onClick={() => onCellClick(day, p.no, slot)} aria-label={`${DAYS[day]} period ${p.no}`}>{content}</button>
+                      <button className="tt-cell" onClick={() => onCellClick(day, p.no, slot)}><span className="sr-only">{DAYS[day]} period {p.no}: </span>{content}</button>
                     ) : (
                       <div className="tt-cell">{content}</div>
                     )}

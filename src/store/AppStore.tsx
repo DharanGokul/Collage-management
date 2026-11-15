@@ -45,8 +45,33 @@ function loadDb(tenant: ResolvedTenant): Database {
   return createSeed()
 }
 
-function seedFor(name: string, slug: string, adminEmail?: string, primaryColor?: string) {
+function seedFor(name: string, slug: string, adminEmail?: string, primaryColor?: string, blank?: boolean) {
   const db = createSeed(name)
+  if (blank) {
+    // A real college starts empty: keep settings, tax defaults, periods and templates; drop the sample people and records.
+    db.departments = []
+    db.students = []
+    db.staff = []
+    db.subjects = []
+    db.timetable = []
+    db.attendance = []
+    db.fees = []
+    db.payments = []
+    db.announcements = []
+    db.events = []
+    db.tickets = []
+    db.vendors = []
+    db.bills = []
+    db.invoices = []
+    db.bankTxns = []
+    db.tdsDeposits = []
+    db.chats = []
+    db.requests = []
+    db.leaves = []
+    db.profileChanges = []
+    db.notifications = []
+    db.emailLog = []
+  }
   db.domain.subdomain = slug
   db.branding.shortName = name.length <= 24 ? name : name.split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 8)
   db.branding.tagline = 'Welcome to our campus portal'
@@ -56,9 +81,9 @@ function seedFor(name: string, slug: string, adminEmail?: string, primaryColor?:
 }
 
 /** Used by the platform super admin to provision a new college. */
-export function provisionTenant(opts: { name: string; slug: string; adminEmail: string; primaryColor: string; plan: TenantPlan }) {
+export function provisionTenant(opts: { name: string; slug: string; adminEmail: string; primaryColor: string; plan: TenantPlan; blank?: boolean }) {
   const id = `t-${opts.slug}-${Date.now().toString(36)}`
-  const db = seedFor(opts.name, opts.slug, opts.adminEmail, opts.primaryColor)
+  const db = seedFor(opts.name, opts.slug, opts.adminEmail, opts.primaryColor, opts.blank)
   localStorage.setItem(dbKey(id), JSON.stringify({ v: SCHEMA_VERSION, db }))
   upsertTenant({ id, subdomain: opts.slug, customDomain: '', name: opts.name, status: 'active', plan: opts.plan, adminEmail: opts.adminEmail.toLowerCase(), createdAt: new Date().toISOString() })
   return id

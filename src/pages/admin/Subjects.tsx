@@ -34,7 +34,7 @@ export default function Subjects() {
         </div>
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>Code</th><th>Subject</th><th>Year</th><th>Credits</th><th>Faculty</th><th /></tr></thead>
+            <thead><tr><th>Code</th><th>Subject</th><th>Year</th><th>Credits</th><th>Faculty</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
               {list.map((s) => (
                 <tr key={s.id}>

@@ -10,6 +10,7 @@ import { AUTH_DEMO, DEMO_PASSWORD } from '../auth/service'
 import { AuthError, type AuthSession } from '../auth/types'
 import { formatSeconds } from '../auth/policy'
 import { loadAuthDb } from '../auth/storage'
+import { takeExpiredNotice } from '../auth/session'
 import { AuthShell, PasswordField, StatusHead } from './auth/parts'
 import { OtpStep, type OtpChallengeInfo } from './auth/OtpStep'
 import type { Role } from '../types'
@@ -36,6 +37,21 @@ export default function Login() {
   const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [lockUntil, setLockUntil] = useState(0)
+  const [lockLeft, setLockLeft] = useState(0)
+  const [expired] = useState(() => takeExpiredNotice(tenant.id))
+  // Live countdown while the account is locked, so the message never goes stale.
+  useEffect(() => {
+    if (!lockUntil) return
+    const step = () => {
+      const left = Math.max(0, Math.ceil((lockUntil - Date.now()) / 1000))
+      setLockLeft(left)
+      if (left === 0) { setLockUntil(0); setError(null) }
+    }
+    step()
+    const t = setInterval(step, 1000)
+    return () => clearInterval(t)
+  }, [lockUntil])
   // Warm the selected role's dashboard chunk while the user types their credentials.
   useEffect(() => prefetch(`/${role}`), [role])
 
@@ -68,7 +84,7 @@ export default function Login() {
     e.preventDefault()
     if (busy) return
     setError(null)
-    if (suspended) return setError('This college portal is suspended. Please contact the platform administrator.')
+    if (suspended) return
     if (!identifier.trim()) return setError('Enter your ID or email.')
     if (!password) return setError('Enter your password.')
     setBusy(true)
@@ -79,9 +95,9 @@ export default function Login() {
       setStep({ kind: 'notice', reason: res.status, email: res.email, identifier })
     } catch (err) {
       if (err instanceof AuthError) {
-        const wait = err.retryAfter ? ` Try again in ${formatSeconds(err.retryAfter)}.` : ''
         const left = err.attemptsLeft !== undefined && err.attemptsLeft <= 2 ? ` ${err.attemptsLeft} ${err.attemptsLeft === 1 ? 'attempt' : 'attempts'} left before a temporary lock.` : ''
-        setError(err.message + wait + left)
+        if (err.retryAfter) setLockUntil(Date.now() + err.retryAfter * 1000)
+        setError(err.retryAfter ? err.message.replace(/\s*Try again later\.?$/i, '') : err.message + left)
       } else setError('Could not sign in. Please try again.')
     } finally {
       setBusy(false)
@@ -151,9 +167,10 @@ export default function Login() {
           </Field>
         )}
 
-        {suspended && <div className="alert alert-error" role="alert"><Ban size={16} /> This college portal is currently suspended.</div>}
-        {error && <div className="alert alert-error" role="alert">{error}</div>}
-        <Button type="submit" className="w-full" loading={busy}>Sign in as {ROLES.find((r) => r.id === role)?.label}</Button>
+        {expired && !error && <div className="alert alert-info" role="status">Your session ended for security. Please sign in again.</div>}
+        {suspended && <div className="alert alert-error" role="alert"><Ban size={16} /> This college portal is currently suspended. Please contact the platform administrator.</div>}
+        {error && <div className="alert alert-error" role="alert">{error}{lockLeft > 0 && <> Try again in <strong>{formatSeconds(lockLeft)}</strong>.</>}</div>}
+        <Button type="submit" className="w-full" loading={busy} disabled={suspended}>Sign in as {ROLES.find((r) => r.id === role)?.label}</Button>
         <p className="tiny muted center">
           {AUTH_DEMO ? <>Demo mode · password <code>{DEMO_PASSWORD}</code> · codes appear in the Demo inbox</> : <>Protected sign-in with email verification</>}
           {tenant.via === 'query' && <> · tenant <code>{tenant.slug}</code></>}

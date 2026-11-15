@@ -13,9 +13,13 @@ export default function StaffStudents() {
   }, [db.timetable, subjects])
   const [cls, setCls] = useState(classes[0] ?? '')
   const [q, setQ] = useState('')
+  const [lowOnly, setLowOnly] = useState(false)
   const mySubjectIds = new Set(subjects.map((s) => s.id))
   const sessions = db.attendance.filter((a) => a.classKey === cls && mySubjectIds.has(a.subjectId))
-  const rows = db.students.filter((s) => s.status === 'active' && studentClassKey(s) === cls && (!q || s.name.toLowerCase().includes(q.toLowerCase()) || s.rollNo.toLowerCase().includes(q.toLowerCase())))
+  const pctOf = (id: string) => { const r = summarize(sessions, id); return r.total ? r.pct : null }
+  const inClass = db.students.filter((s) => s.status === 'active' && studentClassKey(s) === cls)
+  const lowCount = inClass.filter((s) => { const p = pctOf(s.id); return p !== null && p < 75 }).length
+  const rows = inClass.filter((s) => (!q || s.name.toLowerCase().includes(q.toLowerCase()) || s.rollNo.toLowerCase().includes(q.toLowerCase())) && (!lowOnly || (pctOf(s.id) ?? 100) < 75))
 
   if (!classes.length) return <><PageHeader title="My students" /><Card><Empty title="You have no classes assigned yet" /></Card></>
 
@@ -25,11 +29,12 @@ export default function StaffStudents() {
       <Card pad={false}>
         <div className="toolbar">
           <div className="chips">{classes.map((k) => <button key={k} className={`chip ${k === cls ? 'active' : ''}`} onClick={() => setCls(k)}>{classLabel(k)}</button>)}</div>
+          <button className={`chip ${lowOnly ? 'active' : ''}`} aria-pressed={lowOnly} onClick={() => setLowOnly((v) => !v)}>Below 75% ({lowCount})</button>
           <div className="search"><Search size={16} /><input className="input" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search students" /></div>
         </div>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
           <table className="table">
-            <thead><tr><th>Student</th><th className="hide-sm">Roll no</th><th className="hide-sm">Phone</th><th className="hide-sm">Guardian</th><th>My subjects</th></tr></thead>
+            <thead><tr><th>Student</th><th className="hide-sm">Roll no</th><th className="hide-sm">Phone</th><th className="hide-sm">Guardian</th><th>Attendance (my subjects)</th></tr></thead>
             <tbody>
               {rows.map((s) => {
                 const r = summarize(sessions, s.id)

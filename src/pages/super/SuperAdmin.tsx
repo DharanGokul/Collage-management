@@ -62,7 +62,7 @@ export function SuperLogin() {
     }
   }
   return (
-    <div className="super-login">
+    <main className="super-login">
       <div className="login-top"><ThemeToggle /></div>
       <div className="login-card auth-card">
         <div className="login-card-logo"><span className="brand-mark super-mark" style={{ width: 44, height: 44 }}><ShieldCheck size={22} /></span></div>
@@ -75,7 +75,7 @@ export function SuperLogin() {
           />
         ) : (
           <form className="stack" onSubmit={submit} noValidate>
-            <div><h2>Platform console</h2><p className="muted">Super admin access for {PLATFORM_DOMAIN}</p></div>
+            <div><h1>Platform console</h1><p className="muted">Super admin access for {PLATFORM_DOMAIN}</p></div>
             <Field label="Email">{(id) => <input id={id} className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} />}</Field>
             <PasswordField label="Password" value={password} onChange={setPassword} autoComplete="current-password" />
             {error && <div className="alert alert-error" role="alert">{error}</div>}
@@ -86,7 +86,7 @@ export function SuperLogin() {
         )}
       </div>
       {AUTH_DEMO && <DemoMailbox scope={PLATFORM_SCOPE} />}
-    </div>
+    </main>
   )
 }
 
@@ -211,20 +211,21 @@ export function SuperConsole() {
           )}
         </Card>
       </main>
-      {creating && <OnboardModal existing={rows.map((r) => r.t)} onClose={() => setCreating(false)} onCreated={(name) => { setCreating(false); toast(`${name} is live`); refresh() }} />}
+      {creating && <OnboardModal existing={rows.map((r) => r.t)} onClose={() => setCreating(false)} onCreated={(name, email) => { setCreating(false); toast(`${name} is live. ${email} can sign in as Admin${AUTH_DEMO ? ` (demo password ${DEMO_PASSWORD})` : ' once they activate their account'}.`); refresh() }} />}
       {deleting && <DeleteModal t={deleting} onClose={() => setDeleting(null)} onDeleted={() => { toast(`${deleting.name} deleted`); setDeleting(null); refresh() }} />}
       <Toaster />
     </div>
   )
 }
 
-function OnboardModal({ existing, onClose, onCreated }: { existing: TenantRef[]; onClose: () => void; onCreated: (name: string) => void }) {
+function OnboardModal({ existing, onClose, onCreated }: { existing: TenantRef[]; onClose: () => void; onCreated: (name: string, email: string) => void }) {
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
   const [adminEmail, setAdminEmail] = useState('')
   const [color, setColor] = useState(PRESET_COLORS[1])
   const [plan, setPlan] = useState<TenantPlan>('starter')
+  const [blank, setBlank] = useState(true)
   const [touched, setTouched] = useState(false)
   const effectiveSlug = slugEdited ? slug : slugify(name)
   const errors = {
@@ -248,8 +249,8 @@ function OnboardModal({ existing, onClose, onCreated }: { existing: TenantRef[];
               setTouched(true)
               if (hasErr) return
               try {
-                provisionTenant({ name: name.trim(), slug: effectiveSlug, adminEmail: adminEmail.trim(), primaryColor: color, plan })
-                onCreated(name.trim())
+                provisionTenant({ name: name.trim(), slug: effectiveSlug, adminEmail: adminEmail.trim(), primaryColor: color, plan, blank })
+                onCreated(name.trim(), adminEmail.trim())
               } catch {
                 alert('Browser storage is full – delete a college or clear site data and try again.')
               }
@@ -273,9 +274,12 @@ function OnboardModal({ existing, onClose, onCreated }: { existing: TenantRef[];
         </Field>
         <Field label="College admin email" required error={err('email')} hint="Their login for the college Admin portal">{(id) => <input id={id} className="input" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="principal@college.edu" />}</Field>
         <Field label="Plan">{(id) => <select id={id} className="input" value={plan} onChange={(e) => setPlan(e.target.value as TenantPlan)}>{(Object.keys(PLANS) as TenantPlan[]).map((p) => <option key={p} value={p}>{PLANS[p].label} – {Number.isFinite(PLANS[p].students) ? `up to ${PLANS[p].students.toLocaleString('en-IN')} students` : 'unlimited students'} · {formatMoney(PLANS[p].price, 'INR')}/mo</option>)}</select>}</Field>
+        <Field label="Starting data" span={2} hint={blank ? 'Recommended for a real college: no students, staff or fees until the admin adds them.' : 'Fills the portal with a fictional college so you can demo every feature. It cannot be separated from real data later.'}>
+          {(id) => <select id={id} className="input" value={blank ? 'blank' : 'sample'} onChange={(e) => setBlank(e.target.value === 'blank')}><option value="blank">Empty college (real use)</option><option value="sample">Sample data (demo / training)</option></select>}
+        </Field>
         <div className="field span-2">
           <label>Starting brand colour</label>
-          <div className="swatches">{PRESET_COLORS.map((c) => <button key={c} className={`swatch ${color === c ? 'on' : ''}`} style={{ background: c }} aria-label={`Use ${c}`} onClick={() => setColor(c)} />)}</div>
+          <div className="swatches" role="group" aria-label="Starting brand colour">{PRESET_COLORS.map((c) => <button type="button" key={c} className={`swatch ${color === c ? 'on' : ''}`} style={{ background: c }} aria-label={`Use ${c}`} aria-pressed={color === c} onClick={() => setColor(c)} />)}</div>
           <small className="muted">The college admin can change colours, logo, favicon, domain and email settings later.</small>
         </div>
       </div>

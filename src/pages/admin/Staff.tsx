@@ -56,7 +56,7 @@ export default function StaffPage() {
           </select>
         </div>
         {rows.length === 0 ? (
-          <Empty icon={<Users />} title="No staff found" />
+          <Empty icon={<Users />} title={db.staff.length === 0 ? 'No staff yet' : 'No staff match'}>{db.staff.length === 0 ? 'Start with Departments & HODs, then add faculty and office staff.' : 'Try clearing the search or filters.'}</Empty>
         ) : (
           <div className="table-wrap">
             <table className="table">

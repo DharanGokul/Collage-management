@@ -148,6 +148,27 @@ export default function AdminDashboard() {
         }
       />
 
+      {db.students.length === 0 && db.staff.length === 0 && (
+        <Card title="Set up your college">
+          <p className="muted">Your portal is empty. Work through these in order; each one unlocks the next.</p>
+          <ol className="stack-s mt" style={{ paddingLeft: 20 }}>
+            {[
+              { done: db.departments.length > 0, to: '/admin/staff', label: 'Add departments and HODs', hint: 'Staff › Departments & HODs' },
+              { done: db.staff.length > 0, to: '/admin/staff', label: 'Add faculty and staff', hint: 'Each person gets a login from their email' },
+              { done: db.students.length > 0, to: '/admin/students', label: 'Add or import students', hint: 'Import CSV, or add one at a time' },
+              { done: db.fees.length > 0, to: '/admin/fees', label: 'Create the fee structure', hint: 'Fees & Payments › Fee structure' },
+              { done: !!db.branding.logo, to: '/admin/settings', label: 'Add your logo and colours', hint: 'Settings › Branding' },
+              { done: false, to: '/admin/settings?tab=email', label: 'Connect email sending', hint: 'Needed for codes, reminders and receipts' },
+            ].map((x) => (
+              <li key={x.label}>
+                <Link to={x.to} className="link">{x.label}</Link> {x.done && <Badge tone="green">done</Badge>}
+                <div className="muted tiny">{x.hint}</div>
+              </li>
+            ))}
+          </ol>
+        </Card>
+      )}
+
       <div className="grid dash">
         <Card title="Up next" actions={<Link to="/admin/calendar" className="link">Open calendar</Link>}>
           <div className="stack">
@@ -218,7 +239,7 @@ export default function AdminDashboard() {
                   <div className="feed-head">
                     <strong>{a.title}</strong>
                     <Badge tone={a.audience === 'all' ? 'primary' : a.audience === 'staff' ? 'blue' : 'green'}>{a.audience}</Badge>
-                    <button className="icon-btn sm" aria-label="Delete announcement" onClick={() => { update((d) => { d.announcements = d.announcements.filter((x) => x.id !== a.id) }); toast('Announcement removed') }}><Trash2 size={14} /></button>
+                    <button className="icon-btn sm" aria-label="Delete announcement" onClick={() => { if (!confirm(`Remove the announcement “${a.title}”? Students and staff will no longer see it.`)) return; update((d) => { d.announcements = d.announcements.filter((x) => x.id !== a.id) }); toast('Announcement removed') }}><Trash2 size={14} /></button>
                   </div>
                   <p className="muted">{a.body}</p>
                   <small className="muted">{formatDate(a.createdAt)}</small>

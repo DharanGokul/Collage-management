@@ -15,7 +15,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const b = db.branding
   return (
     <div className="login">
-      <div className="login-hero">
+      <aside className="login-hero" aria-label="About this college">
         <div className="slab slab-black" />
         <div className="slab slab-accent"><span className="slab-word">{(b.shortName || b.collegeName).split(' ')[0]}</span></div>
         <div className="slab slab-white" />
@@ -39,7 +39,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             {b.address && <span><MapPin size={14} /> {b.address}</span>}
           </div>
         </div>
-      </div>
+      </aside>
       <main className="login-panel">
         <div className="login-top"><ThemeToggle /></div>
         <div className="login-card auth-card">
