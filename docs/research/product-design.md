@@ -218,8 +218,8 @@ Page-level overflow: none. No horizontal page scroll at 375 or 1440 on any role.
 - Secondary derivation rework (5.3) and a designer review of the mid-tone presets plus a colour-vision-deficiency simulation of the status colours and charts (not done).
 - The audit samples seeded demo data; modals, toasts in transit, and the super admin console were not scanned.
 - Primary sources (w3.org) could not be fetched; re-check the WCAG wording at the pages cited.
-- `npx oxlint` currently reports `react(refs)` warnings in `src/components/ui.tsx` lines 136 and 137. These are not from this work (another agent's edits) and need resolving before the final check is clean.
+- `npx tsc -b`, `npx oxlint` (zero warnings) and `npm test` (35 tests) pass at the time of writing.
 
 ## Final run
 
-(Appended below from the last audit run.)
+Last full run, 16 brand colours x both themes, after all fixes including the secondary-button hover border (about 10,300 text samples): **0 text failures, 0 token failures, 0 measurable non-text failures**. The script's raw non-text count of 82 contains only unmeasurable samples (ratio about 1.0, where the sampled point falls on the same fill, for example a full-width bar) and the filled primary button, which is excluded because its label identifies it. Unlike the earlier runs, the non-text sampling here was corrected (card-edge background, ring sampled above the input).

@@ -86,7 +86,13 @@ export function useAuth() {
       resendOtp: (challengeId: string) => svc.resendOtp(dir, challengeId),
       verifyEmail: (token: string) => svc.verifyEmail(dir, token),
       resendVerification: (email: string) => svc.resendVerification(dir, email),
-      requestPasswordReset: (email: string) => svc.requestPasswordReset(dir, email),
+      /** Accepts an email, a roll number or an employee ID and mails the reset link to the address on file. */
+      requestPasswordReset(identifier: string) {
+        const id = identifier.trim()
+        const roles: AccountRole[] = ['student', 'staff', 'accountant', 'admin']
+        const person = id.includes('@') ? dir.findByEmail(id)?.person : roles.map((r) => dir.find(r, id)).find(Boolean)
+        return svc.requestPasswordReset(dir, person?.email ?? id)
+      },
       inspectToken: (token: string, kind: 'password_reset' | 'invite') => svc.inspectToken(dir, token, kind),
       resetPassword: (token: string, password: string) => svc.resetPassword(dir, token, password),
       activateAccount: (token: string, password: string) => svc.activateAccount(dir, token, password),

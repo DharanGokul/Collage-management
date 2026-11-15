@@ -111,7 +111,17 @@ export function generatedFavicon(name: string, color: string) {
   return 'data:image/svg+xml,' + encodeURIComponent(svg)
 }
 
-export const PRESET_COLORS: string[] = ['#6d001a', '#000000', '#1f3a5f', '#0b5d4b', '#7a4b00', '#4b1d6b', '#8c1c13', '#2f4f4f', '#5a3e2b', '#1d4ed8']
+/**
+ * Brand presets. The first ten are deep colours (the app lightens them for the Night theme); the second row are
+ * mid-tones that look the same in both themes. Index 1 (Crimson) is the default for newly onboarded colleges.
+ * Black is deliberately absent: it has no hue identity and is invisible against the Night page.
+ * The mid-tones were chosen by contrast calculation (docs/research/product-design.md), not yet by a designer or a
+ * colour-vision-deficiency simulation.
+ */
+export const PRESET_COLORS: string[] = [
+  '#6d001a', '#cf2541', '#1f3a5f', '#0b5d4b', '#7a4b00', '#4b1d6b', '#8c1c13', '#2f4f4f', '#5a3e2b', '#1d4ed8',
+  '#b04f2c', '#9a5f11', '#5f7422', '#1a7b4b', '#157875', '#1773a1', '#2c66da', '#5e5ed0', '#8a4fc4', '#b03ba6', '#5a6d87',
+]
 
 /**
  * Read an uploaded image and downscale it so it fits comfortably in

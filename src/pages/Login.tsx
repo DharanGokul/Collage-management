@@ -22,6 +22,24 @@ const ROLES: { id: Role; label: string; icon: ReactNode }[] = [
   { id: 'accountant', label: 'Accounts', icon: <Calculator size={16} /> },
 ]
 
+const ROLE_IDS: Role[] = ['admin', 'staff', 'student', 'accountant']
+const lastRoleKey = (tenantId: string) => `cms:lastRole:${tenantId}`
+function readLastRole(tenantId: string): Role {
+  try {
+    const v = localStorage.getItem(lastRoleKey(tenantId)) as Role | null
+    return v && ROLE_IDS.includes(v) ? v : 'admin'
+  } catch {
+    return 'admin'
+  }
+}
+function saveLastRole(tenantId: string, role: Role) {
+  try {
+    localStorage.setItem(lastRoleKey(tenantId), role)
+  } catch {
+    /* private mode: the form simply opens on Admin next time */
+  }
+}
+
 type Step = { kind: 'credentials' } | { kind: 'otp'; challenge: OtpChallengeInfo; remember: boolean } | { kind: 'notice'; reason: 'unverified' | 'invited'; email: string; identifier: string }
 
 export default function Login() {
@@ -31,8 +49,9 @@ export default function Login() {
   const adminEmail = getTenant(tenant.id)?.adminEmail
   const whiteLabel = tenant.via === 'custom-domain'
   const [step, setStep] = useState<Step>({ kind: 'credentials' })
-  const [role, setRole] = useState<Role>('admin')
-  const [identifier, setIdentifier] = useState(() => adminEmail ?? 'admin@college.edu')
+  // Open on the role this browser used last, so a student or teacher is not greeted by the Admin form every time.
+  const [role, setRole] = useState<Role>(() => readLastRole(tenant.id))
+  const [identifier, setIdentifier] = useState(() => defaultId(role))
   const [password, setPassword] = useState(AUTH_DEMO ? DEMO_PASSWORD : '')
   const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -69,13 +88,19 @@ export default function Login() {
 
   if (session && !suspended) return <Navigate to={`/${session.role}`} replace />
 
+  // Demo builds pre-fill the first person of the chosen role; real colleges start with an empty field.
+  function defaultId(r: Role) {
+    if (!AUTH_DEMO) return ''
+    return r === 'admin' ? (adminEmail ?? 'admin@college.edu') : r === 'staff' ? (db.staff[0]?.email ?? '') : r === 'accountant' ? (db.accountants[0]?.email ?? '') : (db.students[0]?.rollNo ?? '')
+  }
   const switchRole = (r: Role) => {
     setRole(r)
     setError(null)
-    setIdentifier(r === 'admin' ? (adminEmail ?? 'admin@college.edu') : r === 'staff' ? (db.staff[0]?.email ?? '') : r === 'accountant' ? (db.accountants[0]?.email ?? '') : (db.students[0]?.rollNo ?? ''))
+    setIdentifier(defaultId(r))
   }
 
   const finish = (s: AuthSession, keep: boolean) => {
+    saveLastRole(tenant.id, s.role as Role)
     startSession(s, keep)
     nav(`/${s.role}`, { replace: true })
   }
