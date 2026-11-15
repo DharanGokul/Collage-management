@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Plus, Search, Pencil, Trash2, Download, Users, Building2 } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Download, Users, Building2, Calculator } from 'lucide-react'
 import DepartmentsModal from './DepartmentsModal'
+import AccountsTeamModal from './AccountsTeamModal'
 import { useStore } from '../../store/AppStore'
 import { Avatar, Badge, Button, Card, Empty, Field, Modal, PageHeader, Pager, usePaged } from '../../components/ui'
 import { downloadCSV, isValidEmail, uid } from '../../lib/utils'
@@ -12,6 +13,7 @@ export default function StaffPage() {
   const [dept, setDept] = useState('all')
   const [editing, setEditing] = useState<Staff | null>(null)
   const [depts, setDepts] = useState(false)
+  const [accountsTeam, setAccountsTeam] = useState(false)
 
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase()
@@ -39,6 +41,7 @@ export default function StaffPage() {
         actions={
           <>
             <Button variant="secondary" icon={<Building2 size={16} />} onClick={() => setDepts(true)}>Departments &amp; HODs</Button>
+            <Button variant="secondary" icon={<Calculator size={16} />} onClick={() => setAccountsTeam(true)}>Accounts team</Button>
             <Button variant="secondary" icon={<Download size={16} />} onClick={() => downloadCSV('staff.csv', [['Emp ID', 'Name', 'Email', 'Phone', 'Department', 'Designation', 'Status'], ...rows.map((s) => [s.empId, s.name, s.email, s.phone, s.department, s.designation, s.status])])}>Export CSV</Button>
             <Button icon={<Plus size={16} />} onClick={() => setEditing({ id: '', empId: '', name: '', email: '', phone: '', department: db.departments[0]?.code ?? '', designation: 'Assistant Professor', status: 'active', joinedOn: new Date().toISOString().slice(0, 10) })}>Add staff</Button>
           </>
@@ -93,6 +96,7 @@ export default function StaffPage() {
         <Pager {...paged} />
       </Card>
       {depts && <DepartmentsModal onClose={() => setDepts(false)} />}
+      {accountsTeam && <AccountsTeamModal onClose={() => setAccountsTeam(false)} />}
       {editing && (
         <StaffForm
           initial={editing}

@@ -26,7 +26,8 @@ This is a gap analysis against how Indian colleges (affiliated colleges and auto
 | Maintenance and issue reports (benches, electrical, network) | 🆕 | Repair/setup requests with priority, location, timeline and progress stepper |
 | Staff leave (CL / SL / EL / OD) with balances | 🆕 | HOD approves their faculty; management approves the HOD; working-day count; yearly quotas |
 | Student profile changes approved by HOD | 🆕 | Photo, name, contact and guardian changes need HOD approval; staff edit their own contact details and photo |
-| Purchase approval limit | 🆕 | Configurable in Taxes › Settings (default ₹25,000) |
+| Purchase approval limit | 🆕 | Set by management in Admin › Settings › Approval limit (default ₹25,000); read-only for Accounts, so the person who pays bills cannot change the limit that controls them |
+| **Accounts team** | 🆕 | Management adds and deactivates accounts users (Admin › Staff › Accounts team); a new college starts without any |
 | Substitute arrangement when a teacher is on leave | ⬜ | Suggest free faculty for their periods; notify the class |
 | Student leave and on-duty for events | ⬜ | Class advisor approves; attendance marked as OD automatically |
 | Circulars needing acknowledgement | 🟡 | Announcements exist; "read & acknowledged" tracking does not |
